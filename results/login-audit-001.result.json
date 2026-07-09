@@ -1,0 +1,24 @@
+{
+  "case_id": "login-audit-001",
+  "artifact_type": "requirement_backlog",
+  "overall_score": 100,
+  "passed": true,
+  "criteria_scores": {
+    "schema_validity": 100,
+    "completeness": 100,
+    "acceptance_criteria_quality": 100,
+    "testability": 100,
+    "business_alignment": 100,
+    "invest_signal": 100,
+    "published_artifact_fidelity": 100
+  },
+  "findings": [],
+  "suggested_improvements": [],
+  "metadata": {
+    "source_app": "AI_Requirement_Tool",
+    "flow_name": "requirement_sdlc_agent",
+    "run_id": "sample-run-login-audit-001",
+    "trace_id": "sample-trace-login-audit-001",
+    "judge_enabled": false
+  }
+}

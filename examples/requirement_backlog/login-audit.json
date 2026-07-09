@@ -1,0 +1,27 @@
+{
+  "case_id": "login-audit-001",
+  "artifact_type": "requirement_backlog",
+  "input": {
+    "user_prompt": "Create a requirement for auditing admin login attempts."
+  },
+  "canonical_output": {
+    "summary": "Add admin login auditing",
+    "business_value": "Improves traceability for privileged access reviews and security investigations.",
+    "acceptance_criteria": [
+      "Every admin login attempt is recorded with timestamp, user, source IP, and outcome.",
+      "Security reviewers can filter admin login attempts by user and date range."
+    ],
+    "priority": "High",
+    "invest_analysis": "Independent, valuable, small enough for one sprint, and testable through audit log queries.",
+    "description": "Business Value: Improves traceability for privileged access reviews.\n\nAcceptance Criteria:\n- Every admin login attempt is recorded with timestamp, user, source IP, and outcome.\n- Security reviewers can filter admin login attempts by user and date range."
+  },
+  "published_artifacts": {
+    "markdown": "# Add admin login auditing\n\nImproves traceability for privileged access reviews.\n\n- Every admin login attempt is recorded.\n- Security reviewers can filter attempts by user and date."
+  },
+  "run_metadata": {
+    "source_app": "AI_Requirement_Tool",
+    "flow_name": "requirement_sdlc_agent",
+    "run_id": "sample-run-login-audit-001",
+    "trace_id": "sample-trace-login-audit-001"
+  }
+}

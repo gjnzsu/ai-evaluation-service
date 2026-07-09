@@ -1,0 +1,58 @@
+{
+  "case_id": "ai-platform-green-001",
+  "artifact_type": "pm_status_report",
+  "input": {
+    "project_key": "AIP",
+    "time_window": "This week"
+  },
+  "canonical_output": {
+    "project_key": "AIP",
+    "project_name": "AI Platform",
+    "time_window": "This week",
+    "audience": "Steering Committee",
+    "health": "Green",
+    "executive_summary": "AI Platform is green with delivery scope on track for the selected sprint.",
+    "progress": [
+      {
+        "summary": "Gateway integration is complete",
+        "source_key": "AIP-101"
+      }
+    ],
+    "completed": [
+      {
+        "summary": "RAG ingestion smoke test passed",
+        "source_key": "AIP-99"
+      }
+    ],
+    "risks": [],
+    "blockers": [],
+    "decisions_needed": [],
+    "owner_gaps": [],
+    "next_actions": [
+      {
+        "summary": "Run SIT smoke tests",
+        "owner": "PMO"
+      }
+    ],
+    "stakeholder_update": "AI Platform status is Green. Next: Run SIT smoke tests.",
+    "source_references": [
+      {
+        "source_type": "jira",
+        "key": "AIP-101",
+        "title": "Gateway integration"
+      }
+    ],
+    "confidence_notes": [
+      "Analyzed current sprint Jira issues and status notes."
+    ]
+  },
+  "published_artifacts": {
+    "markdown": "# AI Platform Status\n\n## Health: Green\n\nAI Platform is green.\n\n## Next Actions\n\n- Run SIT smoke tests"
+  },
+  "run_metadata": {
+    "source_app": "AI_Requirement_Tool",
+    "flow_name": "pm_status_agent",
+    "run_id": "sample-run-ai-platform-green-001",
+    "trace_id": "sample-trace-ai-platform-green-001"
+  }
+}

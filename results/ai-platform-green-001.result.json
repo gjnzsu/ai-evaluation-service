@@ -1,0 +1,27 @@
+{
+  "case_id": "ai-platform-green-001",
+  "artifact_type": "pm_status_report",
+  "overall_score": 93,
+  "passed": true,
+  "criteria_scores": {
+    "schema_validity": 100,
+    "health_validity": 100,
+    "completeness": 42,
+    "evidence_grounding": 100,
+    "stakeholder_readability": 100,
+    "pm_reasoning_quality": 100,
+    "confidence_notes": 100,
+    "published_artifact_fidelity": 100
+  },
+  "findings": [],
+  "suggested_improvements": [
+    "Populate relevant delivery signal sections such as progress and next actions."
+  ],
+  "metadata": {
+    "source_app": "AI_Requirement_Tool",
+    "flow_name": "pm_status_agent",
+    "run_id": "sample-run-ai-platform-green-001",
+    "trace_id": "sample-trace-ai-platform-green-001",
+    "judge_enabled": false
+  }
+}
