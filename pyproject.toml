@@ -1,5 +1,5 @@
 [project]
-name = "ai-evulation-service"
+name = "ai-evaluation-service"
 version = "0.1.0"
 description = "Batch-first AI output evaluation service MVP"
 requires-python = ">=3.11"
@@ -24,4 +24,3 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
-

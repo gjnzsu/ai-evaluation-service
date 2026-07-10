@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -20,23 +21,43 @@ def main(argv: list[str] | None = None) -> int:
     evaluate_case = subparsers.add_parser("evaluate-case")
     evaluate_case.add_argument("--file", required=True)
     evaluate_case.add_argument("--output", required=True)
+    evaluate_case.add_argument("--run-id")
 
     evaluate = subparsers.add_parser("evaluate")
     evaluate.add_argument("--input", required=True)
     evaluate.add_argument("--output", required=True)
+    evaluate.add_argument("--run-id")
 
     args = parser.parse_args(argv)
     engine = EvaluationEngine()
+    started_at = _utc_now()
+    run_id = _safe_name(args.run_id or _default_run_id(started_at))
+    run_dir = Path(args.output) / "runs" / run_id
+    cases_dir = run_dir / "cases"
 
     if args.command == "evaluate-case":
-        result = _evaluate_file(Path(args.file), Path(args.output), engine)
-        _write_summary(Path(args.output), [result])
+        result = _evaluate_file(Path(args.file), cases_dir, engine)
+        _write_run_artifacts(
+            run_dir,
+            run_id=run_id,
+            command=args.command,
+            input_path=Path(args.file),
+            results=[result],
+            started_at=started_at,
+        )
         return 0 if result.passed else 1
 
     results = []
     for case_file in sorted(Path(args.input).rglob("*.json")):
-        results.append(_evaluate_file(case_file, Path(args.output), engine))
-    _write_summary(Path(args.output), results)
+        results.append(_evaluate_file(case_file, cases_dir, engine))
+    _write_run_artifacts(
+        run_dir,
+        run_id=run_id,
+        command=args.command,
+        input_path=Path(args.input),
+        results=results,
+        started_at=started_at,
+    )
     return 0 if all(result.passed for result in results) else 1
 
 
@@ -76,8 +97,54 @@ def _invalid_file_result(path: Path, error: Exception) -> EvaluationResult:
     )
 
 
-def _write_summary(output_dir: Path, results: list[EvaluationResult]) -> None:
+def _write_run_artifacts(
+    output_dir: Path,
+    *,
+    run_id: str,
+    command: str,
+    input_path: Path,
+    results: list[EvaluationResult],
+    started_at: str,
+) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
+    summary = _build_summary(results)
+    completed_at = _utc_now()
+    run_payload = {
+        "run_id": run_id,
+        "command": command,
+        "input_path": str(input_path),
+        "started_at": started_at,
+        "completed_at": completed_at,
+        "summary": summary,
+    }
+    (output_dir / "run.json").write_text(
+        json.dumps(run_payload, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    (output_dir / "summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    _write_summary(output_dir, results)
+
+
+def _build_summary(results: list[EvaluationResult]) -> dict[str, Any]:
+    total = len(results)
+    passed = sum(1 for result in results if result.passed)
+    average_score = round(
+        sum(result.overall_score for result in results) / total,
+        2,
+    ) if total else 0
+    return {
+        "total_cases": total,
+        "passed_cases": passed,
+        "failed_cases": total - passed,
+        "average_score": average_score,
+        "case_ids": [result.case_id for result in results],
+    }
+
+
+def _write_summary(output_dir: Path, results: list[EvaluationResult]) -> None:
     lines = [
         "# Evaluation Summary",
         "",
@@ -97,6 +164,13 @@ def _safe_name(value: Any) -> str:
     return "".join(char if char.isalnum() or char in {"-", "_"} else "-" for char in text)
 
 
+def _utc_now() -> str:
+    return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def _default_run_id(started_at: str) -> str:
+    return started_at.replace("+00:00", "Z").replace(":", "").replace("-", "")
+
+
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -9,6 +9,7 @@ PoC AI applications need a repeatable way to evaluate output quality before they
 - Introduce an optional published artifact evaluation layer for Jira, Confluence, Markdown, and rendered text fidelity.
 - Add a hybrid evaluator approach with deterministic gates always enabled and optional LLM judge scoring.
 - Add CLI entry points for evaluating one case or a directory of cases.
+- Store each local evaluation execution as a run folder with a manifest, per-case results, and human/machine-readable summaries.
 - Preserve run metadata for future observability, gateway, latency, and cost metric joins.
 
 ## Capabilities

@@ -1,6 +1,6 @@
 ## Context
 
-`ai-evulation-service` starts as an empty repository for a platform-level evaluation service. The first source application is `AI_Requirement_Tool`, whose latest implementation exposes two important flow outputs:
+`ai-evaluation-service` starts as an empty repository for a platform-level evaluation service. The first source application is `AI_Requirement_Tool`, whose latest implementation exposes two important flow outputs:
 
 - Requirement backlog flow: canonical `backlog_data` JSON with optional Jira and Confluence derived artifacts.
 - PM status flow: canonical `PmStatusReport.to_dict()` JSON with Markdown and optional Confluence derived artifacts.
@@ -45,9 +45,11 @@ Deterministic gates always run for schema, required fields, field types, empty s
 
 Alternative considered: LLM-only judge. That would be quicker to prototype but harder to reproduce, more expensive, and weaker as a platform foundation.
 
-### Decision: Filesystem result storage for MVP 1
+### Decision: Filesystem run store for MVP 1
 
-The CLI will write JSON results and a Markdown summary into an output directory. This avoids database setup while still giving repeatable artifacts for comparison.
+The CLI will treat `--output` as a local result store root and create one run directory per execution under `runs/<run_id>/`. Each run contains a `run.json` manifest, a `summary.json` machine-readable aggregate, a `summary.md` human-readable aggregate, and per-case JSON results under `cases/`. A caller may pass `--run-id` for reproducible CI or smoke-test paths; otherwise the service generates a UTC timestamp-based run id.
+
+This keeps MVP 1 free of database setup while preserving enough structure for repeatable local artifacts, CI uploads, and a later SQLite or dashboard index.
 
 Alternative considered: add SQLite immediately. SQLite may be useful later, but it is not required for the first closed-loop MVP.
 
@@ -75,4 +77,10 @@ Rollback is deletion or non-use of the new service because no external system is
 
 ## Open Questions
 
-No blocking MVP 1 questions remain. Future MVPs should decide how to ingest live outputs from `AI_Requirement_Tool`, how to join observability cost metrics, and whether to add persistent run history.
+No blocking MVP 1 questions remain. Future MVPs should decide how to ingest live outputs from `AI_Requirement_Tool`, how to join observability cost metrics, whether to add persistent run history, how to add human approval evidence as post-evaluation review artifacts, and how to promote the LLM judge extension point into an auditable semantic evaluator.
+
+## Product Roadmap Notes
+
+Human-in-the-loop approval should remain out of MVP 1 implementation scope. The recommended future design is an optional approval evidence layer stored beside each run, for example `reviews/<case_id>.review.json` plus review summaries. Machine evaluation results should remain immutable; human reviewers add separate approval, rejection, revision, or waiver records for release-gate evidence.
+
+LLM-as-judge should also remain out of MVP 1 implementation scope beyond the disabled-by-default extension point. The first LLM-as-judge MVP should add offline, opt-in semantic judging for saved batch cases. It should use versioned rubrics and structured JSON judge output, record judge model, prompt, rubric, confidence, and cost metadata, and compare judge findings against human approval evidence for calibration. It should annotate machine results rather than replace deterministic scores or act as a release gate.

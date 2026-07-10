@@ -34,6 +34,8 @@ def test_cli_evaluate_case_writes_json_result(tmp_path):
             str(case_file),
             "--output",
             str(output_dir),
+            "--run-id",
+            "single-smoke",
         ],
         text=True,
         capture_output=True,
@@ -41,10 +43,16 @@ def test_cli_evaluate_case_writes_json_result(tmp_path):
     )
 
     assert completed.returncode == 0
-    result_file = output_dir / "login-audit.result.json"
+    run_dir = output_dir / "runs" / "single-smoke"
+    result_file = run_dir / "cases" / "login-audit.result.json"
     assert result_file.exists()
     payload = json.loads(result_file.read_text(encoding="utf-8"))
     assert payload["case_id"] == "login-audit"
+    run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert run_payload["run_id"] == "single-smoke"
+    assert run_payload["summary"]["total_cases"] == 1
+    assert (run_dir / "summary.json").exists()
+    assert (run_dir / "summary.md").exists()
 
 
 def test_cli_batch_continues_after_invalid_json(tmp_path):
@@ -64,6 +72,18 @@ def test_cli_batch_continues_after_invalid_json(tmp_path):
                     "audience": "Team",
                     "health": "Green",
                     "executive_summary": "AI Platform is green and on track.",
+                    "progress": [{"summary": "Gateway integration complete"}],
+                    "completed": [{"summary": "Batch eval MVP merged"}],
+                    "risks": [{"summary": "No material risk"}],
+                    "blockers": [{"summary": "No active blockers"}],
+                    "decisions_needed": [{"summary": "Confirm dashboard timing"}],
+                    "owner_gaps": [{"summary": "No owner gaps"}],
+                    "next_actions": [{"summary": "Run SIT smoke tests"}],
+                    "stakeholder_update": (
+                        "AI Platform is green and ready for SIT smoke testing."
+                    ),
+                    "source_references": [{"source_type": "jira", "key": "AIP-1"}],
+                    "confidence_notes": ["Jira and status notes reviewed."],
                 },
             }
         ),
@@ -80,6 +100,8 @@ def test_cli_batch_continues_after_invalid_json(tmp_path):
             str(input_dir),
             "--output",
             str(output_dir),
+            "--run-id",
+            "batch-smoke",
         ],
         text=True,
         capture_output=True,
@@ -87,6 +109,13 @@ def test_cli_batch_continues_after_invalid_json(tmp_path):
     )
 
     assert completed.returncode == 1
-    assert (output_dir / "pm-green.result.json").exists()
-    assert (output_dir / "bad.result.json").exists()
-    assert (output_dir / "summary.md").exists()
+    run_dir = output_dir / "runs" / "batch-smoke"
+    assert (run_dir / "cases" / "pm-green.result.json").exists()
+    assert (run_dir / "cases" / "bad.result.json").exists()
+    summary_payload = json.loads((run_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary_payload["total_cases"] == 2
+    assert summary_payload["passed_cases"] == 1
+    assert summary_payload["failed_cases"] == 1
+    run_payload = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    assert run_payload["input_path"] == str(input_dir)
+    assert run_payload["summary"] == summary_payload

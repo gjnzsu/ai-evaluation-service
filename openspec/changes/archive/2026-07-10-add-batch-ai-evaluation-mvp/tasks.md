@@ -46,3 +46,11 @@
 - [x] 7.1 Run the repository quality command
 - [x] 7.2 Fix lint or test failures
 - [x] 7.3 Re-run the full quality command and record passing commands in the final handoff
+
+## 8. Local Run Store
+
+- [x] 8.1 Extend CLI tests to require run-scoped local result artifacts
+- [x] 8.2 Add optional `--run-id` support for deterministic local and CI runs
+- [x] 8.3 Write per-case results under `runs/<run_id>/cases/`
+- [x] 8.4 Write `run.json`, `summary.json`, and `summary.md` for each run
+- [x] 8.5 Update README and OpenSpec artifacts for the run store behavior

@@ -72,6 +72,24 @@ The system SHALL provide a CLI that evaluates one JSON case file or all JSON cas
 - **WHEN** the user runs the CLI with `evaluate --input <directory>` and one file is invalid
 - **THEN** the system records a failed result for the invalid file and continues evaluating remaining valid files
 
+### Requirement: Evaluation runs are stored as local artifacts
+
+The system SHALL store each CLI execution as a local run artifact directory containing a run manifest, per-case results, and aggregate summaries.
+
+#### Scenario: Run folder is created
+- **WHEN** the user runs `evaluate-case` or `evaluate` with `--output <directory>`
+- **THEN** the system writes artifacts under `<directory>/runs/<run_id>/`
+- **AND** per-case JSON results are written under `<directory>/runs/<run_id>/cases/`
+
+#### Scenario: Run id can be supplied
+- **WHEN** the user supplies `--run-id <id>`
+- **THEN** the system uses that id for the run directory after safe filename normalization
+
+#### Scenario: Run manifest and summaries are written
+- **WHEN** a CLI evaluation completes
+- **THEN** the system writes `run.json`, `summary.json`, and `summary.md` for the run
+- **AND** `run.json` includes the run id, command, input path, timestamps, and aggregate summary
+
 ### Requirement: LLM judge is optional
 
 The system SHALL support an optional LLM judge while allowing deterministic-only evaluation by default.

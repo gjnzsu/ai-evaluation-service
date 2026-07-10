@@ -18,6 +18,7 @@ This distinction is the core platform pattern for the MVP.
 - Evaluate published artifacts for fidelity and readability when present.
 - Keep the engine API-ready so a future FastAPI layer can call the same core logic.
 - Preserve run metadata for future joins with observability, gateway, latency, and cost metrics.
+- Store each local execution as a run-scoped artifact folder for repeatable inspection.
 
 ## Non-Goals
 
@@ -89,11 +90,36 @@ Scores use a 0-100 scale. Deterministic blocking failures can force `passed=fals
 MVP 1 exposes a CLI:
 
 ```powershell
-python -m app.cli evaluate --input examples --output results
-python -m app.cli evaluate-case --file examples/requirement_backlog/login-audit.json
+python -m app.cli evaluate --input examples --output results --run-id local-smoke
+python -m app.cli evaluate-case --file examples/requirement_backlog/login-audit.json --output results --run-id login-audit-smoke
 ```
 
-The CLI writes JSON run results and a compact Markdown report. The internal engine remains independent of CLI concerns.
+The CLI treats `--output` as a local result store root. Each execution writes:
+
+```text
+results/
+  runs/
+    <run_id>/
+      run.json
+      summary.json
+      summary.md
+      cases/
+        <case_id>.result.json
+```
+
+`--run-id` is optional. When omitted, the CLI generates a UTC timestamp-based run id. The internal engine remains independent of CLI and filesystem concerns.
+
+## Producer Integration Boundary
+
+`ai-evaluation-service` does not include the `AI_Requirement_Tool` exporter program in its build. The exporter belongs to the source application because it knows the live agent result objects, such as requirement `backlog_data`, Jira results, Confluence results, and `PmStatusReport`.
+
+The evaluation service owns the input case contract and validates files that match it. Source applications own producer-side adapters that write compatible case JSON files.
+
+This keeps the platform boundary clean:
+
+- Producer app: converts live runtime outputs into evaluation case JSON.
+- Evaluation service: evaluates saved case JSON and writes run results.
+- Future integration: GCS, Pub/Sub, or HTTP APIs can transport the same case contract without changing evaluator logic.
 
 ## Proposed File Structure
 
@@ -143,3 +169,11 @@ Tests should cover:
 - Cost metrics are not scored in MVP 1, but metadata join keys are preserved.
 - Requirement backlog canonical JSON is the primary eval target; Jira and Confluence are derived artifacts.
 - PM status report uses `PmStatusReport.to_dict()` as canonical JSON and Markdown/Confluence as published artifacts.
+- Filesystem run store is the MVP result persistence model.
+
+## Product Roadmap
+
+- Human approval evidence: add optional post-evaluation review records beside each run, without mutating machine evaluation results.
+- LLM-as-judge MVP 1: add an offline, opt-in semantic judge for saved batch cases using versioned rubrics, structured JSON judge output, judge metadata, and calibration against human approval evidence. It should annotate results rather than replace deterministic scores or act as a release gate.
+- Cost and observability join: combine quality scores with gateway and platform observability metrics through preserved run metadata.
+- Persistent run index: add SQLite or another lightweight index when local run folders need trend queries or dashboard support.
