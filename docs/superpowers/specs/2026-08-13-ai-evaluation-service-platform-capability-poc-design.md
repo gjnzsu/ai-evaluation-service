@@ -11,7 +11,9 @@ The POC will turn this evaluator into a reusable backend capability inside a bro
 
 The first consumer will be `AI_Requirement_Tool`. Future AI applications must be able to use the same versioned service contract without depending on evaluator internals.
 
-The editable architecture and flow diagrams are in [`docs/diagrams/ai-evaluation-service-poc.drawio`](../../diagrams/ai-evaluation-service-poc.drawio).
+The editable architecture and flow diagrams are available in both
+[`Chinese`](../../diagrams/ai-evaluation-service-poc.drawio) and
+[`English`](../../diagrams/ai-evaluation-service-poc-english.drawio) versions.
 
 ## 2. Goals
 
