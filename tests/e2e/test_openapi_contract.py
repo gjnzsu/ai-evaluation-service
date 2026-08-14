@@ -27,3 +27,23 @@ def test_openapi_contains_all_poc_operations() -> None:
         paths["/v1/evaluations/{evaluation_id}/reviews"]["post"]["responses"]
     )
     assert "503" in paths["/health/ready"]["get"]["responses"]
+
+    submit_responses = paths["/v1/evaluations"]["post"]["responses"]
+    for code in ("200", "202"):
+        assert submit_responses[code]["content"]["application/json"]["schema"] == {
+            "$ref": "#/components/schemas/EvaluationSubmission"
+        }
+
+    for operation in (
+        paths["/v1/evaluations"]["get"],
+        paths["/v1/evaluations/{evaluation_id}"]["get"],
+    ):
+        assert operation["responses"]["422"]["content"]["application/json"][
+            "schema"
+        ] == {"$ref": "#/components/schemas/ApiErrorResponse"}
+
+    ready_responses = paths["/health/ready"]["get"]["responses"]
+    for code in ("200", "503"):
+        assert ready_responses[code]["content"]["application/json"]["schema"] == {
+            "$ref": "#/components/schemas/ReadinessResponse"
+        }

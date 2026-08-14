@@ -18,6 +18,10 @@ class ApiErrorResponse(BaseModel):
     error: ApiErrorDetail
 
 
+class ReadinessResponse(BaseModel):
+    status: Literal["ready", "not_ready"]
+
+
 class EvaluationSubmission(BaseModel):
     evaluation_id: UUID
     execution_status: ExecutionStatus

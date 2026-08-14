@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -30,9 +31,14 @@ class FakeJobs:
         self.renewed = 0
         self.owner = True
         self.renew_error: Exception | None = None
+        self.claim_error: Exception | None = None
+        self.complete_error: Exception | None = None
+        self.fail_error: Exception | None = None
 
     async def claim_next(self, worker_id: str, lease_seconds: int):
         del worker_id, lease_seconds
+        if self.claim_error is not None:
+            raise self.claim_error
         if self.claimed:
             return None
         self.claimed = True
@@ -46,10 +52,14 @@ class FakeJobs:
         return self.job if self.owner else None
 
     async def complete(self, **arguments):
+        if self.complete_error is not None:
+            raise self.complete_error
         self.completed = arguments
         return self.owner
 
     async def fail(self, **arguments):
+        if self.fail_error is not None:
+            raise self.fail_error
         self.failed = arguments
         return self.owner
 
@@ -100,6 +110,64 @@ async def test_no_eligible_job_returns_false() -> None:
     worker = WorkerService(jobs, StubEngine(), DisabledOptionalJudge(), "worker-a", 60)
 
     assert await worker.process_one() is False
+
+
+@pytest.mark.asyncio
+async def test_claim_failure_is_contained_and_logged_without_secret(caplog) -> None:
+    jobs = FakeJobs()
+    jobs.claim_error = RuntimeError("claim-password-secret")
+    worker = WorkerService(jobs, StubEngine(), DisabledOptionalJudge(), "worker-a", 60)
+
+    with caplog.at_level(logging.INFO, logger="ai_evaluation_service"):
+        assert await worker.process_one() is False
+
+    fields = [getattr(record, "safe_fields", {}) for record in caplog.records]
+    assert {
+        "event": "worker_iteration_failed",
+        "error_code": "job_claim_failed",
+    } in fields
+    assert "claim-password-secret" not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_complete_failure_is_contained_and_logged_without_secret(caplog) -> None:
+    jobs = FakeJobs()
+    jobs.complete_error = RuntimeError("complete-password-secret")
+    worker = WorkerService(jobs, StubEngine(), DisabledOptionalJudge(), "worker-a", 60)
+
+    with caplog.at_level(logging.INFO, logger="ai_evaluation_service"):
+        assert await worker.process_one() is False
+
+    fields = [getattr(record, "safe_fields", {}) for record in caplog.records]
+    assert any(
+        item.get("error_code") == "job_completion_failed" for item in fields
+    )
+    assert "complete-password-secret" not in caplog.text
+    assert "Traceback" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_fail_persistence_failure_is_contained_without_secret(caplog) -> None:
+    jobs = FakeJobs()
+    jobs.fail_error = RuntimeError("fail-password-secret")
+    worker = WorkerService(
+        jobs,
+        StubEngine(error=RuntimeError("engine-password-secret")),
+        DisabledOptionalJudge(),
+        "worker-a",
+        60,
+    )
+
+    with caplog.at_level(logging.INFO, logger="ai_evaluation_service"):
+        assert await worker.process_one() is False
+
+    fields = [getattr(record, "safe_fields", {}) for record in caplog.records]
+    assert any(
+        item.get("error_code") == "job_failure_persist_failed" for item in fields
+    )
+    assert "password-secret" not in caplog.text
+    assert "Traceback" not in caplog.text
 
 
 @pytest.mark.asyncio

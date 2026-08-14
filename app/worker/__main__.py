@@ -4,7 +4,7 @@ import socket
 
 from app.config import get_settings
 from app.engine import EvaluationEngine
-from app.observability.logging import configure_json_logging
+from app.observability.logging import configure_json_logging, log_safe
 from app.persistence import Database, JobRepository
 from app.worker.judge import DisabledOptionalJudge
 from app.worker.runner import run
@@ -26,5 +26,21 @@ async def main() -> None:
         await run(worker, settings.worker_poll_seconds)
 
 
+def entrypoint() -> int:
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        return 0
+    except Exception:
+        logger = configure_json_logging()
+        log_safe(
+            logger,
+            event="worker_terminal_failure",
+            error_code="worker_startup_failed",
+        )
+        return 1
+    return 0
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    raise SystemExit(entrypoint())

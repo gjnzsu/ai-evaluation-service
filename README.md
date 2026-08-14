@@ -117,6 +117,8 @@ The committed keys are intentionally local demonstration credentials only:
 
 Both keys have `evaluation:submit`, `evaluation:read`, and `evaluation:review`. The seed command stores only SHA-256 hashes and is idempotent. Copy `.env.example` to `.env` to override local values; never reuse these keys or the local database password outside this disposable stack.
 
+Compose and the smoke script use the same local configuration precedence: process environment, project `.env`, then `.env.example`. The smoke URL is derived from `AI_EVAL_API_PORT`, and its project keys come from `AI_EVAL_DEMO_PROJECT_A_KEY` and `AI_EVAL_DEMO_PROJECT_B_KEY`. Lease mode reads `POSTGRES_USER` and `POSTGRES_DB` from the running PostgreSQL container before invoking `psql`, so changing the local port, keys, database user, or database name remains consistent. `-BaseUrl` is available only when the caller intentionally needs to target an equivalent local endpoint.
+
 Run the bounded expired-lease recovery evidence separately:
 
 ```powershell

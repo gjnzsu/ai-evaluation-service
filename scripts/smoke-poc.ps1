@@ -1,12 +1,46 @@
 param(
     [switch]$TestLeaseRecovery,
-    [string]$BaseUrl = "http://localhost:8000",
+    [string]$BaseUrl,
     [int]$TimeoutSeconds = 60
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectAKey = if ($env:AI_EVAL_DEMO_PROJECT_A_KEY) { $env:AI_EVAL_DEMO_PROJECT_A_KEY } else { "local-project-a-submit-read-review-key" }
-$ProjectBKey = if ($env:AI_EVAL_DEMO_PROJECT_B_KEY) { $env:AI_EVAL_DEMO_PROJECT_B_KEY } else { "local-project-b-submit-read-review-key" }
+$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$ComposeFile = Join-Path $ProjectRoot "compose.yaml"
+$LocalConfig = @{}
+
+foreach ($configPath in @(
+    (Join-Path $ProjectRoot ".env.example"),
+    (Join-Path $ProjectRoot ".env")
+)) {
+    if (-not (Test-Path -LiteralPath $configPath)) { continue }
+    foreach ($line in Get-Content -LiteralPath $configPath) {
+        $trimmed = $line.Trim()
+        if (-not $trimmed -or $trimmed.StartsWith("#")) { continue }
+        $parts = $trimmed.Split("=", 2)
+        if ($parts.Count -eq 2) {
+            $LocalConfig[$parts[0].Trim()] = $parts[1].Trim().Trim('"').Trim("'")
+        }
+    }
+}
+
+function Get-EffectiveConfig([string]$Name) {
+    $environmentValue = [Environment]::GetEnvironmentVariable($Name)
+    if (-not [string]::IsNullOrWhiteSpace($environmentValue)) {
+        return $environmentValue
+    }
+    if ($LocalConfig.ContainsKey($Name) -and -not [string]::IsNullOrWhiteSpace($LocalConfig[$Name])) {
+        return $LocalConfig[$Name]
+    }
+    throw "Missing local POC configuration: $Name"
+}
+
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
+    $BaseUrl = "http://localhost:$(Get-EffectiveConfig 'AI_EVAL_API_PORT')"
+}
+$BaseUrl = $BaseUrl.TrimEnd("/")
+$ProjectAKey = Get-EffectiveConfig "AI_EVAL_DEMO_PROJECT_A_KEY"
+$ProjectBKey = Get-EffectiveConfig "AI_EVAL_DEMO_PROJECT_B_KEY"
 
 function Assert-Equal($Actual, $Expected, [string]$Message) {
     if ($Actual -ne $Expected) { throw "$Message. Expected '$Expected', got '$Actual'." }
@@ -52,21 +86,25 @@ function Assert-CrossProject404([string]$EvaluationId) {
 Wait-Ready
 
 if ($TestLeaseRecovery) {
-    docker compose stop worker | Out-Host
+    docker compose --project-directory $ProjectRoot -f $ComposeFile stop worker | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Could not stop the local POC worker." }
     $case = Get-Content -Raw (Join-Path $PSScriptRoot "..\examples\requirement_backlog\login-audit.json") | ConvertFrom-Json
     $case.case_id = "lease-recovery-$([guid]::NewGuid().ToString('N'))"
     $submitted = Submit-Case $case "lease-$([guid]::NewGuid().ToString('N'))"
     $evaluationId = $submitted.evaluation_id
     $sql = "UPDATE evaluation_jobs SET status='running', lease_owner='crashed-smoke-worker', lease_expires_at=now()-interval '1 second', attempt_count=attempt_count+1 WHERE evaluation_id='$evaluationId'; UPDATE evaluations SET execution_status='running' WHERE id='$evaluationId';"
-    docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U ai_eval -d ai_eval -c $sql | Out-Host
+    $PostgresUser = (docker compose --project-directory $ProjectRoot -f $ComposeFile exec -T postgres sh -ec 'printf "%s" "$POSTGRES_USER"').Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($PostgresUser)) { throw "Could not read POSTGRES_USER from the local POC container." }
+    $PostgresDatabase = (docker compose --project-directory $ProjectRoot -f $ComposeFile exec -T postgres sh -ec 'printf "%s" "$POSTGRES_DB"').Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($PostgresDatabase)) { throw "Could not read POSTGRES_DB from the local POC container." }
+    docker compose --project-directory $ProjectRoot -f $ComposeFile exec -T postgres psql -v ON_ERROR_STOP=1 -U $PostgresUser -d $PostgresDatabase -c $sql | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Could not prepare the bounded expired-lease fixture." }
-    docker compose start worker | Out-Host
+    docker compose --project-directory $ProjectRoot -f $ComposeFile start worker | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Could not restart the local POC worker." }
     $detail = Wait-Evaluation $evaluationId
     Assert-Equal $detail.machine_verdict "pass" "Recovered Evaluation verdict"
     $query = "SELECT j.lease_recovery_count || ',' || count(r.evaluation_id) FROM evaluation_jobs j LEFT JOIN evaluation_results r ON r.evaluation_id=j.evaluation_id WHERE j.evaluation_id='$evaluationId' GROUP BY j.lease_recovery_count;"
-    $evidence = (docker compose exec -T postgres psql -U ai_eval -d ai_eval -Atc $query).Trim()
+    $evidence = (docker compose --project-directory $ProjectRoot -f $ComposeFile exec -T postgres psql -U $PostgresUser -d $PostgresDatabase -Atc $query).Trim()
     if ($LASTEXITCODE -ne 0) { throw "Could not read lease-recovery evidence." }
     $parts = $evidence.Split(',')
     if ([int]$parts[0] -lt 1) { throw "Lease recovery count was not incremented: $evidence" }

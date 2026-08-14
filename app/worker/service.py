@@ -44,9 +44,13 @@ class WorkerService:
         self._logger = logging.getLogger("ai_evaluation_service")
 
     async def process_one(self) -> bool:
-        job = await self._jobs.claim_next(
-            self._worker_id, lease_seconds=self._lease_seconds
-        )
+        try:
+            job = await self._jobs.claim_next(
+                self._worker_id, lease_seconds=self._lease_seconds
+            )
+        except Exception:
+            self._log_iteration_failure("job_claim_failed")
+            return False
         if job is None:
             return False
 
@@ -72,11 +76,18 @@ class WorkerService:
         except Exception:
             await self._stop_renewal(renewal)
             if not ownership_lost.is_set():
-                await self._jobs.fail(
-                    evaluation_id=job.evaluation_id,
-                    lease_owner=self._worker_id,
-                    error_code="evaluation_failed",
-                )
+                try:
+                    await self._jobs.fail(
+                        evaluation_id=job.evaluation_id,
+                        lease_owner=self._worker_id,
+                        error_code="evaluation_failed",
+                    )
+                except Exception:
+                    self._log_iteration_failure(
+                        "job_failure_persist_failed",
+                        evaluation_id=job.evaluation_id,
+                    )
+                    return False
                 log_safe(
                     self._logger,
                     event="evaluation_failed",
@@ -97,15 +108,21 @@ class WorkerService:
             if deterministic_result.passed
             else MachineVerdict.NOT_PASSED
         )
-        completed = await self._jobs.complete(
-            evaluation_id=job.evaluation_id,
-            lease_owner=self._worker_id,
-            deterministic_result=deterministic_result.model_dump(mode="json"),
-            machine_verdict=verdict.value,
-            evaluator_version="deterministic-v1",
-            llm_judge_result=llm_judge_result,
-            warnings=warnings,
-        )
+        try:
+            completed = await self._jobs.complete(
+                evaluation_id=job.evaluation_id,
+                lease_owner=self._worker_id,
+                deterministic_result=deterministic_result.model_dump(mode="json"),
+                machine_verdict=verdict.value,
+                evaluator_version="deterministic-v1",
+                llm_judge_result=llm_judge_result,
+                warnings=warnings,
+            )
+        except Exception:
+            self._log_iteration_failure(
+                "job_completion_failed", evaluation_id=job.evaluation_id
+            )
+            return False
         if completed:
             log_safe(
                 self._logger,
@@ -117,6 +134,16 @@ class WorkerService:
                 duration=round((perf_counter() - started) * 1000, 3),
             )
         return True
+
+    def _log_iteration_failure(
+        self, error_code: str, *, evaluation_id: UUID | None = None
+    ) -> None:
+        log_safe(
+            self._logger,
+            event="worker_iteration_failed",
+            evaluation_id=evaluation_id,
+            error_code=error_code,
+        )
 
     async def _evaluate_judge(
         self, case: EvaluationCase, deterministic_result: EvaluationResult

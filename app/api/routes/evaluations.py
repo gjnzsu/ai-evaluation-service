@@ -31,7 +31,9 @@ def get_evaluation_service(request: Request) -> EvaluationService:
 @router.post(
     "",
     response_model=EvaluationSubmission,
+    status_code=status.HTTP_202_ACCEPTED,
     responses={
+        200: {"model": EvaluationSubmission},
         401: {"model": ApiErrorResponse},
         403: {"model": ApiErrorResponse},
         409: {"model": ApiErrorResponse},
@@ -83,6 +85,7 @@ async def submit_evaluation(
     responses={
         401: {"model": ApiErrorResponse},
         403: {"model": ApiErrorResponse},
+        422: {"model": ApiErrorResponse},
     },
 )
 async def list_evaluations(
@@ -120,6 +123,7 @@ async def list_evaluations(
         401: {"model": ApiErrorResponse},
         403: {"model": ApiErrorResponse},
         404: {"model": ApiErrorResponse},
+        422: {"model": ApiErrorResponse},
     },
 )
 async def get_evaluation(

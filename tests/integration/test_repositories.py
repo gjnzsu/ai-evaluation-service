@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from datetime import UTC, datetime
 
 import conftest as integration_fixtures
@@ -20,6 +21,8 @@ from app.persistence.repositories import (
     JobRepository,
     ReviewRepository,
 )
+
+_SAFE_APPLICATION_LOGGER = logging.getLogger("ai_evaluation_service")
 
 
 def request(case_id: str = "login-audit") -> dict:
@@ -46,6 +49,13 @@ def test_ryuk_override_restores_prior_configuration() -> None:
         assert testcontainers_config.ryuk_disabled is False
     finally:
         testcontainers_config.ryuk_disabled = original
+
+
+def test_migration_does_not_disable_safe_application_logger(
+    migrated_database: str,
+) -> None:
+    assert migrated_database
+    assert _SAFE_APPLICATION_LOGGER.disabled is False
 
 
 @pytest.mark.asyncio
