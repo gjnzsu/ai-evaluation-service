@@ -38,6 +38,7 @@ class RequestContextMiddleware:
             and _SAFE_REQUEST_ID.fullmatch(candidate_request_id) is not None
             else str(uuid4())
         )
+        scope.setdefault("state", {})["request_id"] = request_id
         request_token = _request_id.set(request_id)
         project_token = _project_id.set(None)
 

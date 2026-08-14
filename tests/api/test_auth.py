@@ -7,9 +7,14 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi import Depends
 from fastapi.testclient import TestClient
+from pydantic import BaseModel
 
 from app.api.main import create_app
 from app.persistence.models import ApiClientRow
+
+
+class ValidationFixture(BaseModel):
+    count: int
 
 
 class StubSession:
@@ -45,7 +50,11 @@ def api_client_row(
 
 @pytest.fixture
 def protected_client_factory():
-    def factory(client_row: ApiClientRow | None) -> tuple[TestClient, StubSession]:
+    def factory(
+        client_row: ApiClientRow | None,
+        *,
+        raise_server_exceptions: bool = True,
+    ) -> tuple[TestClient, StubSession]:
         dependencies = import_module("app.api.dependencies")
         context = import_module("app.observability.context")
         app = create_app()
@@ -79,7 +88,17 @@ def protected_client_factory():
         ):
             return {"project_id": authenticated.project_id}
 
-        return TestClient(app), session
+        @app.post("/_test/errors/validation")
+        async def validation_fixture(payload: ValidationFixture):
+            return payload
+
+        @app.get("/_test/errors/unexpected")
+        async def unexpected_fixture():
+            raise RuntimeError("database password=secret-value")
+
+        return TestClient(
+            app, raise_server_exceptions=raise_server_exceptions
+        ), session
 
     return factory
 
@@ -250,3 +269,69 @@ def test_request_context_replaces_unsafe_client_request_id(
     assert UUID(generated_id)
     assert generated_id != "unsafe/request-id"
     assert response.headers["X-Request-ID"] == generated_id
+
+
+def test_framework_404_uses_stable_error_envelope(
+    protected_client_factory,
+) -> None:
+    client, _ = protected_client_factory(None)
+
+    response = client.get(
+        "/_test/does-not-exist", headers={"X-Request-ID": "not-found-request"}
+    )
+
+    assert response.status_code == 404
+    assert response.json() == {
+        "error": {
+            "code": "not_found",
+            "message": "The requested resource was not found.",
+            "request_id": "not-found-request",
+        }
+    }
+    assert response.headers["X-Request-ID"] == "not-found-request"
+
+
+def test_request_validation_uses_stable_422_error_envelope(
+    protected_client_factory,
+) -> None:
+    client, _ = protected_client_factory(None)
+
+    response = client.post(
+        "/_test/errors/validation",
+        headers={"X-Request-ID": "validation-request"},
+        json={"count": "not-an-integer"},
+    )
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "The request is invalid.",
+            "request_id": "validation-request",
+        }
+    }
+    assert response.headers["X-Request-ID"] == "validation-request"
+
+
+def test_unexpected_exception_uses_sanitized_500_error_envelope(
+    protected_client_factory,
+) -> None:
+    secret = "secret-value"
+    client, _ = protected_client_factory(None, raise_server_exceptions=False)
+
+    response = client.get(
+        "/_test/errors/unexpected",
+        headers={"X-Request-ID": "unexpected-request"},
+    )
+
+    assert response.status_code == 500
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json() == {
+        "error": {
+            "code": "internal_error",
+            "message": "An unexpected error occurred.",
+            "request_id": "unexpected-request",
+        }
+    }
+    assert response.headers["X-Request-ID"] == "unexpected-request"
+    assert secret not in response.text
