@@ -1,8 +1,9 @@
 from collections.abc import Sequence
-from datetime import UTC, datetime
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import case, func, select
+from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import aliased
@@ -15,6 +16,16 @@ from app.persistence.models import (
 )
 
 SessionFactory = async_sessionmaker[AsyncSession]
+
+
+@dataclass(frozen=True)
+class ClaimedJob:
+    evaluation_id: UUID
+    request_payload: dict
+    lease_owner: str
+    lease_expires_at: datetime
+    attempt_count: int
+    lease_recovery_count: int
 
 
 class EvaluationRepository:
@@ -193,6 +204,164 @@ class JobRepository:
     def __init__(self, sessions: SessionFactory) -> None:
         self._sessions = sessions
 
+    async def claim_next(
+        self, lease_owner: str, *, lease_seconds: float
+    ) -> ClaimedJob | None:
+        now = datetime.now(UTC)
+        statement = (
+            select(EvaluationJobRow, EvaluationRow.request_payload)
+            .join(EvaluationRow, EvaluationRow.id == EvaluationJobRow.evaluation_id)
+            .where(
+                or_(
+                    and_(
+                        EvaluationJobRow.status == "queued",
+                        EvaluationJobRow.available_at <= now,
+                    ),
+                    and_(
+                        EvaluationJobRow.status == "running",
+                        EvaluationJobRow.lease_expires_at < now,
+                    ),
+                )
+            )
+            .order_by(EvaluationJobRow.available_at, EvaluationJobRow.evaluation_id)
+            .with_for_update(of=EvaluationJobRow, skip_locked=True)
+            .limit(1)
+        )
+        async with self._sessions.begin() as session:
+            record = (await session.execute(statement)).one_or_none()
+            if record is None:
+                return None
+            job, request_payload = record
+            recovering = job.status == "running"
+            job.status = "running"
+            job.lease_owner = lease_owner
+            job.lease_expires_at = now + timedelta(seconds=lease_seconds)
+            job.attempt_count += 1
+            if recovering:
+                job.lease_recovery_count += 1
+            evaluation = await session.get(EvaluationRow, job.evaluation_id)
+            if evaluation is None:
+                return None
+            evaluation.execution_status = "running"
+            evaluation.updated_at = now
+            await session.flush()
+            return ClaimedJob(
+                evaluation_id=job.evaluation_id,
+                request_payload=request_payload,
+                lease_owner=job.lease_owner,
+                lease_expires_at=job.lease_expires_at,
+                attempt_count=job.attempt_count,
+                lease_recovery_count=job.lease_recovery_count,
+            )
+
+    async def renew_lease(
+        self,
+        evaluation_id: UUID,
+        *,
+        lease_owner: str,
+        lease_seconds: float,
+    ) -> EvaluationJobRow | None:
+        async with self._sessions.begin() as session:
+            job = await session.scalar(
+                select(EvaluationJobRow)
+                .where(
+                    EvaluationJobRow.evaluation_id == evaluation_id,
+                    EvaluationJobRow.status == "running",
+                    EvaluationJobRow.lease_owner == lease_owner,
+                )
+                .with_for_update()
+            )
+            if job is None:
+                return None
+            job.lease_expires_at = datetime.now(UTC) + timedelta(seconds=lease_seconds)
+            await session.flush()
+            return job
+
+    async def complete(
+        self,
+        *,
+        evaluation_id: UUID,
+        lease_owner: str,
+        deterministic_result: dict,
+        machine_verdict: str,
+        evaluator_version: str,
+        llm_judge_result: dict | None,
+        warnings: list[dict],
+    ) -> bool:
+        self._validate_warnings(warnings)
+        now = datetime.now(UTC)
+        async with self._sessions.begin() as session:
+            job = await self._owned_running_job(session, evaluation_id, lease_owner)
+            if job is None:
+                return False
+            session.add(
+                EvaluationResultRow(
+                    evaluation_id=evaluation_id,
+                    deterministic_result=deterministic_result,
+                    machine_verdict=machine_verdict,
+                    evaluator_version=evaluator_version,
+                    llm_judge_result=llm_judge_result,
+                    warnings=warnings,
+                    completed_at=now,
+                )
+            )
+            evaluation = await session.get(EvaluationRow, evaluation_id)
+            if evaluation is None:
+                return False
+            evaluation.execution_status = "completed"
+            evaluation.updated_at = now
+            job.status = "completed"
+            job.lease_owner = None
+            job.lease_expires_at = None
+            job.last_error_code = None
+            job.last_error_message = None
+            await session.flush()
+            return True
+
+    async def fail(
+        self,
+        *,
+        evaluation_id: UUID,
+        lease_owner: str,
+        error_code: str,
+    ) -> bool:
+        now = datetime.now(UTC)
+        async with self._sessions.begin() as session:
+            job = await self._owned_running_job(session, evaluation_id, lease_owner)
+            if job is None:
+                return False
+            evaluation = await session.get(EvaluationRow, evaluation_id)
+            if evaluation is None:
+                return False
+            evaluation.execution_status = "failed"
+            evaluation.updated_at = now
+            job.status = "failed"
+            job.lease_owner = None
+            job.lease_expires_at = None
+            job.last_error_code = error_code
+            job.last_error_message = None
+            await session.flush()
+            return True
+
+    @staticmethod
+    async def _owned_running_job(
+        session: AsyncSession, evaluation_id: UUID, lease_owner: str
+    ) -> EvaluationJobRow | None:
+        return await session.scalar(
+            select(EvaluationJobRow)
+            .where(
+                EvaluationJobRow.evaluation_id == evaluation_id,
+                EvaluationJobRow.status == "running",
+                EvaluationJobRow.lease_owner == lease_owner,
+            )
+            .with_for_update()
+        )
+
+    @staticmethod
+    def _validate_warnings(warnings: list[dict]) -> None:
+        if any(warning != {"code": "judge_degraded"} for warning in warnings):
+            raise ValueError("warning must use the safe judge_degraded contract")
+
     async def insert_result(
         self,
         *,
@@ -204,8 +373,7 @@ class JobRepository:
         warnings: list[dict],
         completed_at: datetime,
     ) -> EvaluationResultRow:
-        if any(warning != {"code": "judge_degraded"} for warning in warnings):
-            raise ValueError("warning must use the safe judge_degraded contract")
+        self._validate_warnings(warnings)
         result = EvaluationResultRow(
             evaluation_id=evaluation_id,
             deterministic_result=deterministic_result,
