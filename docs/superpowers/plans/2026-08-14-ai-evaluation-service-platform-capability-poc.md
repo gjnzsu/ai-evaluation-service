@@ -961,6 +961,8 @@ git commit -m "feat: process evaluations with postgres jobs"
 
 ### Task 6: Human Review, safe local operation, Compose, and POC evidence
 
+**Execution status:** Complete (`4ab6ac2..0c071a3`); independent review approved, controller gate passed with 119 tests, and default normal plus expired-lease smoke gates passed. POC conclusion: validated.
+
 #### Part A: Append-only Human Review Evidence API
 
 **Stories:** US-05, US-06
