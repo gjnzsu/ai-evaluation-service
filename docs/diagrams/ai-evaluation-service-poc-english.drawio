@@ -25,19 +25,19 @@
         <mxCell id="postgres" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;br&gt;Evaluations · Jobs&lt;br&gt;Results · Review records" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="evalsvc">
           <mxGeometry x="500" y="65" width="190" height="105" as="geometry"/>
         </mxCell>
-        <mxCell id="worker" value="&lt;b&gt;Worker&lt;/b&gt;&lt;br&gt;Claim · Lease · Retry&lt;br&gt;Failure recovery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="evalsvc">
+        <mxCell id="worker" value="&lt;b&gt;Worker&lt;/b&gt;&lt;br&gt;Claim · Lease&lt;br&gt;Expired-lease recovery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="evalsvc">
           <mxGeometry x="270" y="240" width="180" height="90" as="geometry"/>
         </mxCell>
         <mxCell id="engine" value="&lt;b&gt;Evaluation Engine&lt;/b&gt;&lt;br&gt;Evaluator registry&lt;br&gt;Deterministic rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="evalsvc">
           <mxGeometry x="500" y="240" width="190" height="90" as="geometry"/>
         </mxCell>
-        <mxCell id="judge" value="&lt;b&gt;Optional LLM Judge&lt;/b&gt;&lt;br&gt;Disabled by default&lt;br&gt;Separate annotations" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="evalsvc">
+        <mxCell id="judge" value="&lt;b&gt;Optional LLM Judge&lt;/b&gt;&lt;br&gt;Disabled by default&lt;br&gt;Safe degradation on failure" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="evalsvc">
           <mxGeometry x="500" y="380" width="190" height="90" as="geometry"/>
         </mxCell>
         <mxCell id="platformops" value="&lt;b&gt;Platform responsibilities&lt;/b&gt;&lt;br&gt;Gateway identity (future)&lt;br&gt;Business UI · Release workflow&lt;br&gt;Cost / observability join" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" vertex="1" parent="platform">
           <mxGeometry x="850" y="130" width="220" height="140" as="geometry"/>
         </mxCell>
-        <mxCell id="ops" value="&lt;b&gt;Service observability&lt;/b&gt;&lt;br&gt;Health checks · Metrics&lt;br&gt;JSON logs · traceparent" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="platform">
+        <mxCell id="ops" value="&lt;b&gt;POC basic operations&lt;/b&gt;&lt;br&gt;Health checks&lt;br&gt;Allowlisted safe logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="platform">
           <mxGeometry x="850" y="340" width="220" height="110" as="geometry"/>
         </mxCell>
         <mxCell id="note1" value="POC deployment: api + worker + postgres&lt;br&gt;One codebase and image, separate commands" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
@@ -108,7 +108,7 @@
         <mxCell id="fw-claim" value="Claim eligible Job&lt;br&gt;Lease + attempt count" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="lane-worker">
           <mxGeometry x="660" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="fe-eval" value="Deterministic evaluation&lt;br&gt;Optional Judge" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane-engine">
+        <mxCell id="fe-eval" value="Deterministic evaluation&lt;br&gt;Judge failure degrades safely" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane-engine">
           <mxGeometry x="840" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="fd-complete" value="Result + status&lt;br&gt;One transaction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
@@ -120,7 +120,7 @@
         <mxCell id="fc-review" value="POST review&lt;br&gt;Append review evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
           <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="fw-recover" value="Lease expired?&lt;br&gt;Requeue and retry" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="lane-worker">
+        <mxCell id="fw-recover" value="Lease expired?&lt;br&gt;Reclaim by another Worker" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="lane-worker">
           <mxGeometry x="1200" y="35" width="140" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="fd-review" value="Append review record&lt;br&gt;Never overwrite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
@@ -147,7 +147,7 @@
         <mxCell id="fedge7" value="crash / timeout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="fe-eval" target="fw-recover" parent="f1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="fedge8" value="retry" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="fw-recover" target="fw-claim" parent="f1">
+        <mxCell id="fedge8" value="reclaim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="fw-recover" target="fw-claim" parent="f1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="fedge9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fd-complete" target="fc-poll" parent="f1">
@@ -188,10 +188,10 @@
         <mxCell id="se2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="sr" target="sc" parent="s1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="se3" value="retry exhausted" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#b85450;" edge="1" source="sr" target="sf" parent="s1">
+        <mxCell id="se3" value="terminal error" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#b85450;" edge="1" source="sr" target="sf" parent="s1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="sretry-note" value="Transient failure: increment attempts and return to queued after backoff" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="sexec">
+        <mxCell id="sretry-note" value="Expired lease: Job is reclaimable; Judge failure still completes with deterministic result" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="sexec">
           <mxGeometry x="850" y="60" width="330" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="sverdict" value="Machine verdict after completion: machine_verdict" style="swimlane;startSize=32;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;html=1;" vertex="1" parent="s1">

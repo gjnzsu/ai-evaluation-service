@@ -1,7 +1,8 @@
 # AI Evaluation Service as a Central AI Platform Capability — POC Design
 
 Date: 2026-08-13
-Status: Approved for implementation planning
+Amended: 2026-08-14
+Status: Approved for time-boxed POC implementation
 
 ## 1. Context
 
@@ -15,6 +16,12 @@ The editable architecture and flow diagrams are available in both
 [`Chinese`](../../diagrams/ai-evaluation-service-poc.drawio) and
 [`English`](../../diagrams/ai-evaluation-service-poc-english.drawio) versions.
 
+### 1.1 Time-box amendment
+
+This amendment aligns the approved design with the implementation charter. Implementation stops after **8 elapsed working hours** or **6 implementation tasks**, whichever comes first. The POC proves the happy path, two critical fallbacks—expired Worker lease recovery and optional Judge safe degradation—and one critical trust boundary, cross-project isolation.
+
+Only work that changes the experiment conclusion, protects evaluation data, or preserves the existing evaluator/CLI contract is implemented. Full production observability, disaster recovery, comprehensive security hardening, deployment automation, provider-specific retry matrices, load/capacity/soak/chaos testing, and production LLM provider integration remain follow-up work. New findings do not expand this boundary automatically.
+
 ## 2. Goals
 
 - Expose a versioned asynchronous REST API for submitting and querying evaluations.
@@ -24,7 +31,7 @@ The editable architecture and flow diagrams are available in both
 - Isolate data by project and authorize service calls with scoped API keys.
 - Preserve deterministic results while allowing optional LLM Judge annotations.
 - Record append-only Human Review Evidence for machine evaluation results.
-- Provide health checks, metrics, structured logs, and trace correlation.
+- Provide liveness/readiness checks and allowlisted logs that do not expose evaluation data or credentials.
 - Run locally with one Docker Compose command before any GKE work begins.
 
 ## 3. Non-goals
@@ -37,6 +44,8 @@ The editable architecture and flow diagrams are available in both
 - A general-purpose message broker or high-throughput task platform.
 - Mandatory LLM Judge usage or calibration in the first POC path.
 - GKE deployment manifests in the local debug-first increment.
+- Full Prometheus/OpenTelemetry observability, dashboards, alerting, distributed trace propagation, and production log pipelines.
+- Provider-specific retry/backoff matrices, Judge failover, and comprehensive production failure testing.
 
 ## 4. Architecture
 
@@ -45,7 +54,7 @@ The POC is a modular monolith deployed as separate API and Worker processes from
 ```text
 AI applications / Central Platform workflows
                  |
-                 | REST + API key + trace context
+                 | REST + API key
                  v
         AI Evaluation Service API
                  |
@@ -72,7 +81,7 @@ The service owns:
 - Evaluator dispatch and evaluator version metadata.
 - Asynchronous execution, retries, leases, and idempotency.
 - Durable machine results and Human Review Evidence.
-- Project isolation, scope checks, audit fields, logs, and metrics.
+- Project isolation, scope checks, audit fields, health checks, and safe logs.
 
 The service does not own:
 
@@ -84,8 +93,8 @@ The service does not own:
 
 Docker Compose starts three services:
 
-- `api`: REST API, OpenAPI documentation, health checks, and metrics.
-- `worker`: PostgreSQL job polling, lease management, evaluation, retry, and result persistence.
+- `api`: REST API, OpenAPI documentation, and health checks.
+- `worker`: PostgreSQL job polling, lease management, expired-lease recovery, evaluation, and result persistence.
 - `postgres`: durable local database with a named volume and health check.
 
 The API and Worker use the same image with different startup commands. Database migrations run before either process becomes ready.
@@ -109,7 +118,6 @@ Required headers:
 
 - `X-API-Key`
 - `Idempotency-Key`
-- Optional W3C `traceparent`
 
 The request body retains the current evaluation case shape:
 
@@ -161,6 +169,7 @@ The detail response separates three concerns:
     "evaluator_version": "requirement_backlog-v1"
   },
   "llm_judge_result": null,
+  "warnings": [],
   "review_history": []
 }
 ```
@@ -188,11 +197,12 @@ Execution, machine evaluation, and human review are separate state dimensions.
 
 ```text
 queued -> running -> completed
-                  -> queued     (retry)
-                  -> failed     (retry budget exhausted)
+                  -> failed     (unexpected deterministic-engine error)
 ```
 
 Allowed values are `queued`, `running`, `completed`, and `failed`.
+
+An expired Job lease becomes eligible for reclamation while the Evaluation remains `running`. Optional Judge failure does not produce execution failure when deterministic evaluation has succeeded.
 
 ### 6.2 Machine verdict
 
@@ -213,9 +223,9 @@ The service reports these facts but does not decide whether an upstream applicat
 The initial schema contains:
 
 - `api_clients`: project binding, hashed API key, scopes, enabled flag, and audit timestamps.
-- `evaluations`: immutable request snapshot, request hash, artifact type, execution state, idempotency key, trace metadata, and timestamps.
+- `evaluations`: immutable request snapshot, request hash, artifact type, execution state, idempotency key, and timestamps.
 - `evaluation_jobs`: evaluation reference, status, attempt count, availability time, lease owner, lease expiry, last safe error, and timestamps.
-- `evaluation_results`: one row per evaluation with deterministic result JSON, machine verdict, evaluator version, optional Judge result JSON, and completion timestamp.
+- `evaluation_results`: one row per evaluation with deterministic result JSON, machine verdict, evaluator version, optional Judge result JSON, safe warning JSON, and completion timestamp.
 - `evaluation_reviews`: append-only reviewer decision, reason, waiver rationale, reviewer identity, and timestamp.
 
 Important constraints:
@@ -251,13 +261,13 @@ Workers renew leases during long execution. A Worker only finalizes a Job when i
 
 The Job queue provides at-least-once execution, not exactly-once execution. Evaluators must remain free of external side effects. A unique result row, lease-owner check, and transactional result/status update ensure repeated execution does not create multiple business results.
 
-### 8.5 Retry policy
+### 8.5 Selected failure behavior
 
-- Retry transient database, provider timeout, provider rate-limit, and temporary availability errors.
-- Use exponential backoff for at most three attempts.
-- Mark execution `failed` after the retry budget is exhausted and store a structured, sanitized error.
+- The implemented infrastructure fallback is expired-lease reclamation with guarded finalization; this proves crash recovery without a general retry matrix.
 - Validation and unsupported artifact errors are rejected before Job creation.
-- If the optional LLM Judge exhausts its retry policy, record a warning and complete with the deterministic result.
+- An unexpected deterministic-engine exception may mark execution `failed` with a stable sanitized code.
+- If an enabled optional Judge raises a timeout or provider error, complete with the authoritative deterministic result, set `llm_judge_result` to `null`, and store only a sanitized `judge_degraded` warning.
+- Real-provider integration, provider-specific classification, retry/backoff, rate-limit behavior, and failover are deferred.
 
 ## 9. Evaluation pipeline
 
@@ -265,40 +275,31 @@ The Worker calls the existing `EvaluationEngine` through an application-layer us
 
 Deterministic evaluation remains authoritative for `machine_verdict`. An enabled LLM Judge may add a separate structured result with model, provider, rubric version, prompt version, dimensions, findings, token/cost metadata when available, and provider timing. It does not replace deterministic criteria scores or become a release gate in the POC.
 
+For compatibility, the POC Worker constructs the existing `EvaluationEngine` with its default disabled Judge and uses it only for deterministic evaluation. A Worker-level optional Judge adapter is injected separately and returns a Judge-specific dictionary. This leaves the existing batch CLI and `EvaluationEngine` public interface unchanged while enforcing separate persistence fields in the service contract.
+
 ## 10. Error handling
 
 - API validation errors use stable machine-readable error codes.
 - Authentication failures return `401`; insufficient scope returns `403`; cross-project access returns `404`.
 - Idempotency payload conflicts return `409`.
-- Execution errors are categorized as retryable or terminal and stored without secrets or raw stack traces.
+- Execution errors use stable sanitized codes and are stored without secrets or raw stack traces; comprehensive retryable/terminal classification is deferred.
 - Unexpected API exceptions return a correlation identifier and a generic response.
 - Database unavailability makes readiness fail while liveness remains independent of database state.
 
-## 11. Observability and security
+## 11. Basic operations and data safety
 
 ### 11.1 Logs
 
-Emit structured JSON logs with `request_id`, `trace_id`, `evaluation_id`, `project_id`, artifact type, execution status, attempt, duration, and safe error code.
+Emit allowlisted JSON logs with `request_id`, `evaluation_id`, `project_id`, artifact type, execution status, attempt, duration, and safe error code.
 
 Do not log API keys, canonical payloads, full Judge prompts, provider credentials, or raw exceptions containing request content.
 
-### 11.2 Metrics
-
-Expose Prometheus metrics for:
-
-- Requests, status codes, and latency.
-- Evaluation throughput and duration by artifact type and outcome.
-- Queued and running Job counts.
-- Oldest queued Job age.
-- Retry, terminal failure, and expired lease recovery counts.
-- Optional Judge calls, duration, and failure count without high-cardinality identifiers.
-
-### 11.3 Health and trace context
+### 11.2 Health
 
 - `GET /health/live` verifies process liveness.
 - `GET /health/ready` verifies database connectivity and expected migration revision.
-- `GET /metrics` exposes Prometheus text format.
-- Incoming W3C `traceparent` is propagated into logs, stored correlation metadata, and optional provider calls.
+
+Prometheus/OpenTelemetry metrics, distributed trace propagation, dashboards, alerting, and production log shipping are explicitly deferred by the time-box amendment.
 
 ## 12. Local deployment and developer experience
 
@@ -323,10 +324,10 @@ No local LLM provider configuration is required when the Judge is disabled.
 
 ## 13. Testing strategy
 
-- Unit tests retain coverage of models, scoring, evaluators, state derivation, and error classification.
-- Repository integration tests run against real PostgreSQL and cover migrations, concurrent claims, lease recovery, retries, unique constraints, and transaction rollback.
+- Unit tests retain coverage of models, scoring, evaluators, state derivation, and the two selected fallback contracts.
+- Repository integration tests run against real PostgreSQL and cover migrations, idempotency, concurrent claims, expired-lease recovery, guarded finalization, and required unique constraints.
 - API contract tests cover authentication, scopes, validation, idempotency, pagination, project isolation, and review rules.
-- Worker integration tests cover successful execution, deterministic failure verdicts, retry exhaustion, Judge degradation, and duplicate execution protection.
+- Worker tests cover successful execution, lease recovery, duplicate-result protection, and fake-Judge safe degradation. Provider-specific retry exhaustion and failure permutations are deferred.
 - Docker Compose smoke testing covers the consumer-facing POC path.
 
 ## 14. POC acceptance criteria
@@ -340,9 +341,10 @@ The POC is complete when all of the following are demonstrated:
 5. Machine `pass` produces review `optional`; `not_passed` produces review `required`.
 6. Review Evidence is append-only and enforces the decision and waiver rules.
 7. A terminated Worker leaves a Job that is reclaimed after lease expiry and completes once durably.
-8. Another project cannot read or review the Evaluation.
-9. Logs and metrics expose operational correlation without exposing evaluation payloads or secrets.
-10. The full path works with LLM Judge disabled and no external model credentials.
+8. When an enabled fake Judge fails, execution still completes with the deterministic result, `llm_judge_result = null`, and only a sanitized `judge_degraded` warning.
+9. Another project cannot read or review the Evaluation.
+10. Health checks and allowlisted logs support local diagnosis without exposing evaluation payloads or secrets.
+11. The normal full path works with LLM Judge disabled and no external model credentials.
 
 ## 15. Deferred evolution
 
@@ -350,5 +352,7 @@ The POC is complete when all of the following are demonstrated:
 - Replace PostgreSQL Job with a managed broker when measured throughput, routing, or operational requirements justify it.
 - Deploy API and Worker independently on GKE with managed PostgreSQL.
 - Calibrate LLM Judge results against Human Review Evidence before using them in any gate.
-- Join preserved trace and model metadata with platform cost and observability data.
+- Add Prometheus/OpenTelemetry metrics, trace propagation and metadata, dashboards, alerting, and production log pipelines.
+- Add provider-specific Judge retry/backoff, rate-limit handling, and failover after a real provider is selected.
+- Join model metadata with platform cost and observability data.
 - Add Central AI Platform UI and trend views outside this service boundary.
