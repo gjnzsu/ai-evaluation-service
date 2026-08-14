@@ -1,10 +1,12 @@
 import asyncio
 from datetime import UTC, datetime
 
+import conftest as integration_fixtures
 import pytest
 from sqlalchemy import func, inspect, select, text
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from testcontainers.core.config import testcontainers_config
 
 from app.persistence.db import Database
 from app.persistence.models import (
@@ -26,6 +28,24 @@ def request(case_id: str = "login-audit") -> dict:
         "artifact_type": "requirement_backlog",
         "canonical_output": {"summary": "Audit logins"},
     }
+
+
+def test_ryuk_override_restores_prior_configuration() -> None:
+    original = testcontainers_config.ryuk_disabled
+    try:
+        testcontainers_config.ryuk_disabled = False
+        fixture = getattr(integration_fixtures, "ryuk_disabled_for_postgres", None)
+        assert fixture is not None, "scoped Ryuk override fixture is missing"
+
+        lifecycle = fixture.__wrapped__()
+        assert next(lifecycle) is None
+        assert testcontainers_config.ryuk_disabled is True
+
+        with pytest.raises(StopIteration):
+            next(lifecycle)
+        assert testcontainers_config.ryuk_disabled is False
+    finally:
+        testcontainers_config.ryuk_disabled = original
 
 
 @pytest.mark.asyncio

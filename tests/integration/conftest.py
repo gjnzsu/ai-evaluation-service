@@ -18,11 +18,19 @@ from sqlalchemy.ext.asyncio import (
 from testcontainers.community.postgres import PostgresContainer
 from testcontainers.core.config import testcontainers_config
 
-testcontainers_config.ryuk_disabled = True
+
+@pytest.fixture(scope="session")
+def ryuk_disabled_for_postgres() -> Iterator[None]:
+    previous = testcontainers_config.ryuk_disabled
+    testcontainers_config.ryuk_disabled = True
+    try:
+        yield
+    finally:
+        testcontainers_config.ryuk_disabled = previous
 
 
 @pytest.fixture(scope="session")
-def postgres_url() -> Iterator[str]:
+def postgres_url(ryuk_disabled_for_postgres: None) -> Iterator[str]:
     with PostgresContainer("postgres:16-alpine") as postgres:
         yield postgres.get_connection_url().replace("psycopg2", "psycopg")
 
