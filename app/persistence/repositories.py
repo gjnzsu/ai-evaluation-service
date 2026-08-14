@@ -148,6 +148,7 @@ class EvaluationRepository:
             .scalar_subquery()
         )
         effective_review_status = case(
+            (EvaluationResultRow.evaluation_id.is_(None), None),
             (latest_review.id.is_not(None), latest_review.decision),
             (EvaluationResultRow.machine_verdict == "pass", "optional"),
             (EvaluationResultRow.machine_verdict == "not_passed", "required"),

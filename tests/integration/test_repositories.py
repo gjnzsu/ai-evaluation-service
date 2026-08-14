@@ -433,3 +433,38 @@ async def test_list_page_applies_pagination_filters_and_project_scope(
         )
         assert [record[0].id for record in records] == expected_ids
         assert filtered_total == len(expected_ids)
+
+
+@pytest.mark.asyncio
+async def test_review_status_filters_exclude_no_result_row_with_review_history(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    evaluations = EvaluationRepository(session_factory)
+    queued, _ = await evaluations.create_with_job(
+        "project-a", "queued-with-review", request(), "hash-queued"
+    )
+    async with session_factory.begin() as session:
+        session.add(
+            EvaluationReviewRow(
+                evaluation_id=queued.id,
+                reviewer_id="low-level-fixture",
+                decision="approved",
+                reason="Historical low-level data",
+                waiver_rationale=None,
+                created_at=datetime.now(UTC),
+            )
+        )
+
+    unfiltered, unfiltered_total = await evaluations.list_page_for_project(
+        "project-a", page=1, page_size=20
+    )
+    assert unfiltered_total == 1
+    assert unfiltered[0][1] is None
+    assert unfiltered[0][2].decision == "approved"
+
+    for review_status in ("approved", "rejected", "waived", "optional", "required"):
+        records, total = await evaluations.list_page_for_project(
+            "project-a", page=1, page_size=20, review_status=review_status
+        )
+        assert records == []
+        assert total == 0
