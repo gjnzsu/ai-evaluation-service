@@ -804,6 +804,8 @@ git commit -m "feat: expose asynchronous evaluation API"
 
 ### Task 5: PostgreSQL Job Worker, lease recovery, Judge degradation, and engine integration
 
+**Execution status:** Complete (`1317597..c9dd676`); independent review approved after safe Judge-output and PostgreSQL-clock fixes, and controller quality gate passed with 90 tests.
+
 **Stories:** US-01, US-03, US-04
 
 **Files:**
