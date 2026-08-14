@@ -1,10 +1,13 @@
 import asyncio
+import logging
 from contextlib import suppress
+from time import perf_counter
 from typing import Protocol
 from uuid import UUID
 
 from app.domain.models import EvaluationCase, EvaluationResult
 from app.domain.platform import MachineVerdict
+from app.observability.logging import log_safe
 from app.worker.judge import OptionalJudge, normalize_judge_result
 
 
@@ -38,6 +41,7 @@ class WorkerService:
         self._judge = judge
         self._worker_id = worker_id
         self._lease_seconds = lease_seconds
+        self._logger = logging.getLogger("ai_evaluation_service")
 
     async def process_one(self) -> bool:
         job = await self._jobs.claim_next(
@@ -45,6 +49,15 @@ class WorkerService:
         )
         if job is None:
             return False
+
+        started = perf_counter()
+        log_safe(
+            self._logger,
+            event="evaluation_claimed",
+            evaluation_id=job.evaluation_id,
+            execution_status="running",
+            attempt=getattr(job, "attempt_count", None),
+        )
 
         ownership_lost = asyncio.Event()
         renewal = asyncio.create_task(
@@ -64,6 +77,15 @@ class WorkerService:
                     lease_owner=self._worker_id,
                     error_code="evaluation_failed",
                 )
+                log_safe(
+                    self._logger,
+                    event="evaluation_failed",
+                    evaluation_id=job.evaluation_id,
+                    execution_status="failed",
+                    attempt=getattr(job, "attempt_count", None),
+                    duration=round((perf_counter() - started) * 1000, 3),
+                    error_code="evaluation_failed",
+                )
             return True
 
         await self._stop_renewal(renewal)
@@ -75,7 +97,7 @@ class WorkerService:
             if deterministic_result.passed
             else MachineVerdict.NOT_PASSED
         )
-        await self._jobs.complete(
+        completed = await self._jobs.complete(
             evaluation_id=job.evaluation_id,
             lease_owner=self._worker_id,
             deterministic_result=deterministic_result.model_dump(mode="json"),
@@ -84,6 +106,16 @@ class WorkerService:
             llm_judge_result=llm_judge_result,
             warnings=warnings,
         )
+        if completed:
+            log_safe(
+                self._logger,
+                event="evaluation_completed",
+                evaluation_id=job.evaluation_id,
+                artifact_type=case.artifact_type,
+                execution_status="completed",
+                attempt=getattr(job, "attempt_count", None),
+                duration=round((perf_counter() - started) * 1000, 3),
+            )
         return True
 
     async def _evaluate_judge(

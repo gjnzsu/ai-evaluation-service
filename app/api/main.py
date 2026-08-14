@@ -18,6 +18,7 @@ from app.application.evaluation_service import EvaluationService
 from app.application.review_service import ReviewService
 from app.config import get_settings
 from app.observability.context import RequestContextMiddleware
+from app.observability.logging import SafeRequestLoggingMiddleware
 from app.persistence.db import Database
 from app.persistence.repositories import EvaluationRepository, ReviewRepository
 
@@ -44,6 +45,7 @@ def create_app(
     reviews = ReviewRepository(configured_database.sessions)
     app.state.evaluation_service = evaluation_service or EvaluationService(evaluations, reviews)
     app.state.review_service = review_service or ReviewService(evaluations, reviews)
+    app.add_middleware(SafeRequestLoggingMiddleware)
     app.add_middleware(RequestContextMiddleware)
     app.add_exception_handler(ApiError, api_error_handler)
     app.add_exception_handler(HTTPException, http_exception_handler)
