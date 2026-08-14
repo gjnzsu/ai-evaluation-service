@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from importlib import import_module
@@ -315,14 +316,17 @@ def test_request_validation_uses_stable_422_error_envelope(
 
 def test_unexpected_exception_uses_sanitized_500_error_envelope(
     protected_client_factory,
+    caplog,
+    capsys,
 ) -> None:
     secret = "secret-value"
-    client, _ = protected_client_factory(None, raise_server_exceptions=False)
+    client, _ = protected_client_factory(None)
 
-    response = client.get(
-        "/_test/errors/unexpected",
-        headers={"X-Request-ID": "unexpected-request"},
-    )
+    with caplog.at_level(logging.DEBUG):
+        response = client.get(
+            "/_test/errors/unexpected",
+            headers={"X-Request-ID": "unexpected-request"},
+        )
 
     assert response.status_code == 500
     assert response.headers["content-type"].startswith("application/json")
@@ -335,3 +339,7 @@ def test_unexpected_exception_uses_sanitized_500_error_envelope(
     }
     assert response.headers["X-Request-ID"] == "unexpected-request"
     assert secret not in response.text
+    captured = capsys.readouterr()
+    assert secret not in caplog.text
+    assert secret not in captured.out
+    assert secret not in captured.err

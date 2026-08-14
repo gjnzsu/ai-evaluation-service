@@ -5,6 +5,8 @@ from uuid import uuid4
 from starlette.datastructures import Headers, MutableHeaders
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
+from app.api.errors import error_response
+
 _request_id: ContextVar[str | None] = ContextVar("request_id", default=None)
 _project_id: ContextVar[str | None] = ContextVar("project_id", default=None)
 _SAFE_REQUEST_ID = compile(r"[A-Za-z0-9._:-]{1,128}")
@@ -48,7 +50,19 @@ class RequestContextMiddleware:
             await send(message)
 
         try:
-            await self.app(scope, receive, send_with_request_id)
+            unexpected_error = False
+            try:
+                await self.app(scope, receive, send_with_request_id)
+            except Exception:
+                unexpected_error = True
+            if unexpected_error:
+                response = error_response(
+                    request_id=request_id,
+                    status_code=500,
+                    code="internal_error",
+                    message="An unexpected error occurred.",
+                )
+                await response(scope, receive, send_with_request_id)
         finally:
             _project_id.reset(project_token)
             _request_id.reset(request_token)
