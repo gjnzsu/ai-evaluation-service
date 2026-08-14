@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.domain.models import EvaluationCase, EvaluationResult
 from app.domain.platform import MachineVerdict
-from app.worker.judge import OptionalJudge
+from app.worker.judge import OptionalJudge, normalize_judge_result
 
 
 class DeterministicEngine(Protocol):
@@ -95,7 +95,7 @@ class WorkerService:
             judged = await asyncio.to_thread(
                 self._judge.evaluate, case, deterministic_result
             )
-            return judged, []
+            return normalize_judge_result(judged), []
         except Exception:
             return None, [{"code": "judge_degraded"}]
 

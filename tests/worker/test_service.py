@@ -84,6 +84,15 @@ class SecretFailingJudge:
         raise RuntimeError("provider-secret prompt-secret")
 
 
+class UnsafeOutputJudge:
+    def __init__(self, output: dict) -> None:
+        self.output = output
+
+    def evaluate(self, case: EvaluationCase, deterministic_result: EvaluationResult) -> dict:
+        del case, deterministic_result
+        return self.output
+
+
 @pytest.mark.asyncio
 async def test_no_eligible_job_returns_false() -> None:
     jobs = FakeJobs()
@@ -142,6 +151,40 @@ async def test_judge_failure_completes_without_persisting_secret_exception() -> 
     assert jobs.completed["warnings"] == [{"code": "judge_degraded"}]
     assert "secret" not in repr(jobs.completed)
     assert jobs.failed is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "unsafe_output",
+    [
+        {"rubric_version": "v1", "label": b"not-json-safe"},
+        {
+            "rubric_version": "v1",
+            "label": "clear",
+            "prompt": "full-prompt-secret",
+            "credential": "provider-key-secret",
+        },
+    ],
+)
+async def test_unsafe_judge_output_degrades_without_persisting_output(
+    unsafe_output: dict,
+) -> None:
+    jobs = FakeJobs()
+    worker = WorkerService(
+        jobs,
+        StubEngine(),
+        UnsafeOutputJudge(unsafe_output),
+        "worker-a",
+        60,
+    )
+
+    assert await worker.process_one() is True
+
+    assert jobs.completed["machine_verdict"] == "pass"
+    assert jobs.completed["deterministic_result"] is not None
+    assert jobs.completed["llm_judge_result"] is None
+    assert jobs.completed["warnings"] == [{"code": "judge_degraded"}]
+    assert "secret" not in repr(jobs.completed)
 
 
 @pytest.mark.asyncio

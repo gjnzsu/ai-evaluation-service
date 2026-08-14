@@ -1,5 +1,6 @@
 import asyncio
 from datetime import UTC, datetime, timedelta
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import func, select, update
@@ -91,6 +92,35 @@ async def test_current_owner_can_renew_lease(
 
     assert renewed is not None
     assert renewed.lease_expires_at > claimed.lease_expires_at
+
+
+@pytest.mark.asyncio
+async def test_claim_and_renew_use_postgres_clock_when_host_clock_is_unavailable(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await create_queued(session_factory, "database-clock")
+    jobs = JobRepository(session_factory)
+
+    class ForbiddenHostClock:
+        @classmethod
+        def now(cls, timezone):
+            del timezone
+            raise AssertionError("lease semantics must not read the Worker host clock")
+
+    async with session_factory() as session:
+        database_now = await session.scalar(select(func.now()))
+    with patch("app.persistence.repositories.datetime", ForbiddenHostClock):
+        claimed = await jobs.claim_next("worker-a", lease_seconds=1)
+        assert claimed is not None
+        renewed = await jobs.renew_lease(
+            claimed.evaluation_id,
+            lease_owner="worker-a",
+            lease_seconds=60,
+        )
+
+    assert database_now + timedelta(milliseconds=500) <= claimed.lease_expires_at
+    assert renewed is not None
+    assert database_now + timedelta(seconds=59) <= renewed.lease_expires_at
 
 
 @pytest.mark.asyncio
@@ -250,6 +280,52 @@ async def test_worker_persists_only_safe_warning_when_judge_fails(
         JobRepository(session_factory),
         EvaluationEngine(),
         FailingJudge(),
+        "worker-a",
+        60,
+    )
+
+    assert await worker.process_one() is True
+
+    async with session_factory() as session:
+        result = await session.get(EvaluationResultRow, evaluation.id)
+        row = await session.get(EvaluationRow, evaluation.id)
+        assert row.execution_status == "completed"
+        assert result.deterministic_result is not None
+        assert result.llm_judge_result is None
+        assert result.warnings == [{"code": "judge_degraded"}]
+        assert "secret" not in repr(result.warnings)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "unsafe_output",
+    [
+        {"rubric_version": "v1", "label": b"not-json-safe"},
+        {
+            "rubric_version": "v1",
+            "label": "clear",
+            "raw_provider_response": {"prompt": "full-prompt-secret"},
+            "api_key": "provider-key-secret",
+        },
+    ],
+)
+async def test_worker_degrades_unsafe_judge_output_before_jsonb_persistence(
+    session_factory: async_sessionmaker[AsyncSession],
+    unsafe_output: dict,
+) -> None:
+    evaluation = await create_queued(session_factory, "unsafe-judge-output")
+
+    class UnsafeJudge:
+        enabled = True
+
+        def evaluate(self, case, deterministic_result):
+            del case, deterministic_result
+            return unsafe_output
+
+    worker = WorkerService(
+        JobRepository(session_factory),
+        EvaluationEngine(),
+        UnsafeJudge(),
         "worker-a",
         60,
     )

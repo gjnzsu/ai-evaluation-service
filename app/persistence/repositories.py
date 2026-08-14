@@ -207,7 +207,6 @@ class JobRepository:
     async def claim_next(
         self, lease_owner: str, *, lease_seconds: float
     ) -> ClaimedJob | None:
-        now = datetime.now(UTC)
         statement = (
             select(EvaluationJobRow, EvaluationRow.request_payload)
             .join(EvaluationRow, EvaluationRow.id == EvaluationJobRow.evaluation_id)
@@ -215,11 +214,11 @@ class JobRepository:
                 or_(
                     and_(
                         EvaluationJobRow.status == "queued",
-                        EvaluationJobRow.available_at <= now,
+                        EvaluationJobRow.available_at <= func.now(),
                     ),
                     and_(
                         EvaluationJobRow.status == "running",
-                        EvaluationJobRow.lease_expires_at < now,
+                        EvaluationJobRow.lease_expires_at < func.now(),
                     ),
                 )
             )
@@ -235,7 +234,7 @@ class JobRepository:
             recovering = job.status == "running"
             job.status = "running"
             job.lease_owner = lease_owner
-            job.lease_expires_at = now + timedelta(seconds=lease_seconds)
+            job.lease_expires_at = func.now() + timedelta(seconds=lease_seconds)
             job.attempt_count += 1
             if recovering:
                 job.lease_recovery_count += 1
@@ -243,8 +242,9 @@ class JobRepository:
             if evaluation is None:
                 return None
             evaluation.execution_status = "running"
-            evaluation.updated_at = now
+            evaluation.updated_at = func.now()
             await session.flush()
+            await session.refresh(job, attribute_names=["lease_expires_at"])
             return ClaimedJob(
                 evaluation_id=job.evaluation_id,
                 request_payload=request_payload,
@@ -273,8 +273,9 @@ class JobRepository:
             )
             if job is None:
                 return None
-            job.lease_expires_at = datetime.now(UTC) + timedelta(seconds=lease_seconds)
+            job.lease_expires_at = func.now() + timedelta(seconds=lease_seconds)
             await session.flush()
+            await session.refresh(job, attribute_names=["lease_expires_at"])
             return job
 
     async def complete(
