@@ -692,6 +692,8 @@ git commit -m "feat: authorize project-scoped API clients"
 
 ### Task 4: Asynchronous submission and query API
 
+**Execution status:** Complete (`a0737f9..1d40855`); independent review approved and controller quality gate passed with 64 tests.
+
 **Stories:** US-01, US-02, US-03, US-06
 
 **Files:**
