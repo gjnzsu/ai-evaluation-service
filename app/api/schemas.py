@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.models import EvaluationResult
 from app.domain.platform import ExecutionStatus, MachineVerdict, ReviewStatus
@@ -28,6 +28,17 @@ class ReviewEvidence(BaseModel):
     reason: str
     waiver_rationale: str | None
     created_at: datetime
+
+
+class ReviewRequest(BaseModel):
+    reviewer_id: str = Field(min_length=1, max_length=100)
+    decision: Literal["approved", "rejected", "waived"]
+    reason: str = Field(min_length=1, max_length=1000)
+    waiver_rationale: str | None = Field(default=None, max_length=2000)
+
+
+class ReviewSubmission(ReviewEvidence):
+    review_status: ReviewStatus
 
 
 class DeterministicEvaluationResult(EvaluationResult):
