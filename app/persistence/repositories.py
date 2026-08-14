@@ -2,9 +2,10 @@ from collections.abc import Sequence
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import aliased
 
 from app.persistence.models import (
     EvaluationJobRow,
@@ -106,6 +107,85 @@ class EvaluationRepository:
         async with self._sessions() as session:
             rows: Sequence[EvaluationRow] = (await session.scalars(statement)).all()
             return list(rows)
+
+    async def get_result_for_project(
+        self, evaluation_id: UUID, project_id: str
+    ) -> EvaluationResultRow | None:
+        statement = (
+            select(EvaluationResultRow)
+            .join(EvaluationRow, EvaluationRow.id == EvaluationResultRow.evaluation_id)
+            .where(
+                EvaluationResultRow.evaluation_id == evaluation_id,
+                EvaluationRow.project_id == project_id,
+            )
+        )
+        async with self._sessions() as session:
+            return await session.scalar(statement)
+
+    async def list_page_for_project(
+        self,
+        project_id: str,
+        *,
+        page: int,
+        page_size: int,
+        artifact_type: str | None = None,
+        execution_status: str | None = None,
+        machine_verdict: str | None = None,
+        review_status: str | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
+    ) -> tuple[
+        list[tuple[EvaluationRow, EvaluationResultRow | None, EvaluationReviewRow | None]],
+        int,
+    ]:
+        latest_review = aliased(EvaluationReviewRow)
+        latest_review_id = (
+            select(EvaluationReviewRow.id)
+            .where(EvaluationReviewRow.evaluation_id == EvaluationRow.id)
+            .order_by(EvaluationReviewRow.created_at.desc(), EvaluationReviewRow.id.desc())
+            .limit(1)
+            .correlate(EvaluationRow)
+            .scalar_subquery()
+        )
+        effective_review_status = case(
+            (latest_review.id.is_not(None), latest_review.decision),
+            (EvaluationResultRow.machine_verdict == "pass", "optional"),
+            (EvaluationResultRow.machine_verdict == "not_passed", "required"),
+            else_=None,
+        )
+        conditions = [EvaluationRow.project_id == project_id]
+        if artifact_type is not None:
+            conditions.append(EvaluationRow.artifact_type == artifact_type)
+        if execution_status is not None:
+            conditions.append(EvaluationRow.execution_status == execution_status)
+        if machine_verdict is not None:
+            conditions.append(EvaluationResultRow.machine_verdict == machine_verdict)
+        if review_status is not None:
+            conditions.append(effective_review_status == review_status)
+        if created_from is not None:
+            conditions.append(EvaluationRow.created_at >= created_from)
+        if created_to is not None:
+            conditions.append(EvaluationRow.created_at <= created_to)
+
+        base = (
+            select(EvaluationRow, EvaluationResultRow, latest_review)
+            .outerjoin(
+                EvaluationResultRow,
+                EvaluationResultRow.evaluation_id == EvaluationRow.id,
+            )
+            .outerjoin(latest_review, latest_review.id == latest_review_id)
+            .where(*conditions)
+        )
+        statement = (
+            base.order_by(EvaluationRow.created_at.desc(), EvaluationRow.id)
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+        count_statement = select(func.count()).select_from(base.subquery())
+        async with self._sessions() as session:
+            records = list((await session.execute(statement)).tuples().all())
+            total = int(await session.scalar(count_statement) or 0)
+        return records, total
 
 
 class JobRepository:

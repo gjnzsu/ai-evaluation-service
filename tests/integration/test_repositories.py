@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 
 import conftest as integration_fixtures
 import pytest
-from sqlalchemy import func, inspect, select, text
+from sqlalchemy import func, inspect, select, text, update
 from sqlalchemy.exc import IntegrityError, ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from testcontainers.core.config import testcontainers_config
@@ -318,3 +318,118 @@ async def test_review_cannot_be_appended_across_projects(
         )
         is None
     )
+
+
+@pytest.mark.asyncio
+async def test_result_read_is_project_scoped(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    evaluations = EvaluationRepository(session_factory)
+    jobs = JobRepository(session_factory)
+    evaluation, _ = await evaluations.create_with_job(
+        "project-a", "result-scope", request(), "hash-1"
+    )
+    await jobs.insert_result(
+        evaluation_id=evaluation.id,
+        deterministic_result={"score": 1.0},
+        machine_verdict="pass",
+        evaluator_version="1.0",
+        llm_judge_result=None,
+        warnings=[],
+        completed_at=datetime.now(UTC),
+    )
+
+    assert (
+        await evaluations.get_result_for_project(evaluation.id, "project-a")
+    ).machine_verdict == "pass"
+    assert await evaluations.get_result_for_project(evaluation.id, "project-b") is None
+
+
+@pytest.mark.asyncio
+async def test_list_page_applies_pagination_filters_and_project_scope(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    evaluations = EvaluationRepository(session_factory)
+    jobs = JobRepository(session_factory)
+    reviews = ReviewRepository(session_factory)
+    first, _ = await evaluations.create_with_job(
+        "project-a", "first", request("first"), "hash-first"
+    )
+    second_payload = request("second") | {"artifact_type": "pm_status_report"}
+    second, _ = await evaluations.create_with_job(
+        "project-a", "second", second_payload, "hash-second"
+    )
+    third, _ = await evaluations.create_with_job(
+        "project-a", "third", request("third"), "hash-third"
+    )
+    other, _ = await evaluations.create_with_job(
+        "project-b", "other", request("other"), "hash-other"
+    )
+    dates = {
+        first.id: datetime(2026, 8, 1, tzinfo=UTC),
+        second.id: datetime(2026, 8, 2, tzinfo=UTC),
+        third.id: datetime(2026, 8, 3, tzinfo=UTC),
+        other.id: datetime(2026, 8, 4, tzinfo=UTC),
+    }
+    async with session_factory.begin() as session:
+        for evaluation_id, created_at in dates.items():
+            await session.execute(
+                update(EvaluationRow)
+                .where(EvaluationRow.id == evaluation_id)
+                .values(
+                    execution_status=(
+                        "queued" if evaluation_id == third.id else "completed"
+                    ),
+                    created_at=created_at,
+                    updated_at=created_at,
+                )
+            )
+    for evaluation, verdict in ((first, "pass"), (second, "not_passed"), (other, "pass")):
+        await jobs.insert_result(
+            evaluation_id=evaluation.id,
+            deterministic_result={"score": 1.0},
+            machine_verdict=verdict,
+            evaluator_version="1.0",
+            llm_judge_result=None,
+            warnings=[],
+            completed_at=datetime.now(UTC),
+        )
+    await reviews.append(
+        project_id="project-a",
+        evaluation_id=first.id,
+        reviewer_id="reviewer-1",
+        decision="approved",
+        reason="Looks good",
+        waiver_rationale=None,
+    )
+
+    page_one, total = await evaluations.list_page_for_project(
+        "project-a", page=1, page_size=1
+    )
+    page_two, _ = await evaluations.list_page_for_project(
+        "project-a", page=2, page_size=1
+    )
+    assert [record[0].id for record in page_one] == [third.id]
+    assert [record[0].id for record in page_two] == [second.id]
+    assert total == 3
+
+    filters = [
+        ({"artifact_type": "pm_status_report"}, [second.id]),
+        ({"execution_status": "queued"}, [third.id]),
+        ({"machine_verdict": "pass"}, [first.id]),
+        ({"review_status": "approved"}, [first.id]),
+        ({"review_status": "required"}, [second.id]),
+        (
+            {
+                "created_from": datetime(2026, 8, 2, tzinfo=UTC),
+                "created_to": datetime(2026, 8, 2, tzinfo=UTC),
+            },
+            [second.id],
+        ),
+    ]
+    for query, expected_ids in filters:
+        records, filtered_total = await evaluations.list_page_for_project(
+            "project-a", page=1, page_size=20, **query
+        )
+        assert [record[0].id for record in records] == expected_ids
+        assert filtered_total == len(expected_ids)
