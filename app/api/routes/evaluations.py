@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Header, Query, Request, Response, status
 from app.api.dependencies import AuthenticatedClient, authenticate_client
 from app.api.errors import ApiError
 from app.api.schemas import (
+    ApiErrorResponse,
     EvaluationDetail,
     EvaluationListPage,
     EvaluationSubmission,
@@ -27,7 +28,16 @@ def get_evaluation_service(request: Request) -> EvaluationService:
     return request.app.state.evaluation_service
 
 
-@router.post("", response_model=EvaluationSubmission)
+@router.post(
+    "",
+    response_model=EvaluationSubmission,
+    responses={
+        401: {"model": ApiErrorResponse},
+        403: {"model": ApiErrorResponse},
+        409: {"model": ApiErrorResponse},
+        422: {"model": ApiErrorResponse},
+    },
+)
 async def submit_evaluation(
     payload: EvaluationCase,
     response: Response,
@@ -67,7 +77,14 @@ async def submit_evaluation(
     )
 
 
-@router.get("", response_model=EvaluationListPage)
+@router.get(
+    "",
+    response_model=EvaluationListPage,
+    responses={
+        401: {"model": ApiErrorResponse},
+        403: {"model": ApiErrorResponse},
+    },
+)
 async def list_evaluations(
     authenticated: Annotated[
         AuthenticatedClient, Depends(authenticate_client("evaluation:read"))
@@ -96,7 +113,15 @@ async def list_evaluations(
     return EvaluationListPage.model_validate(result)
 
 
-@router.get("/{evaluation_id}", response_model=EvaluationDetail)
+@router.get(
+    "/{evaluation_id}",
+    response_model=EvaluationDetail,
+    responses={
+        401: {"model": ApiErrorResponse},
+        403: {"model": ApiErrorResponse},
+        404: {"model": ApiErrorResponse},
+    },
+)
 async def get_evaluation(
     evaluation_id: UUID,
     authenticated: Annotated[

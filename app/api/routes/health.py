@@ -10,7 +10,11 @@ def live() -> dict[str, str]:
     return {"status": "alive"}
 
 
-@router.get("/health/ready", response_model=None)
+@router.get(
+    "/health/ready",
+    response_model=None,
+    responses={503: {"description": "Database or migration revision is not ready."}},
+)
 async def ready(request: Request) -> dict[str, str] | JSONResponse:
     try:
         async with request.app.state.database.sessions() as session:

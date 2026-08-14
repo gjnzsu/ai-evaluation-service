@@ -8,6 +8,16 @@ from app.domain.models import EvaluationResult
 from app.domain.platform import ExecutionStatus, MachineVerdict, ReviewStatus
 
 
+class ApiErrorDetail(BaseModel):
+    code: str
+    message: str
+    request_id: str
+
+
+class ApiErrorResponse(BaseModel):
+    error: ApiErrorDetail
+
+
 class EvaluationSubmission(BaseModel):
     evaluation_id: UUID
     execution_status: ExecutionStatus

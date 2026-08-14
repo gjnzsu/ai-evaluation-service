@@ -18,7 +18,7 @@ from app.application.evaluation_service import EvaluationService
 from app.application.review_service import ReviewService
 from app.config import get_settings
 from app.observability.context import RequestContextMiddleware
-from app.observability.logging import SafeRequestLoggingMiddleware
+from app.observability.logging import SafeRequestLoggingMiddleware, configure_json_logging
 from app.persistence.db import Database
 from app.persistence.repositories import EvaluationRepository, ReviewRepository
 
@@ -58,4 +58,5 @@ def create_app(
     return app
 
 
+configure_json_logging()
 app = create_app()

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Request, status
 
 from app.api.dependencies import AuthenticatedClient, authenticate_client
 from app.api.errors import ApiError
-from app.api.schemas import ReviewRequest, ReviewSubmission
+from app.api.schemas import ApiErrorResponse, ReviewRequest, ReviewSubmission
 from app.application.review_service import (
     EvaluationNotReviewable,
     InvalidReviewDecision,
@@ -24,6 +24,12 @@ def get_review_service(request: Request) -> ReviewService:
     "/{evaluation_id}/reviews",
     response_model=ReviewSubmission,
     status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"model": ApiErrorResponse},
+        403: {"model": ApiErrorResponse},
+        404: {"model": ApiErrorResponse},
+        422: {"model": ApiErrorResponse},
+    },
 )
 async def append_review(
     evaluation_id: UUID,

@@ -1,0 +1,52 @@
+name: ai-evaluation-service-poc
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${AI_EVAL_POSTGRES_USER:-ai_eval}
+      POSTGRES_PASSWORD: ${AI_EVAL_POSTGRES_PASSWORD:-local-poc-password}
+      POSTGRES_DB: ${AI_EVAL_POSTGRES_DB:-ai_eval}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    environment:
+      AI_EVAL_DATABASE_URL: postgresql+psycopg://${AI_EVAL_POSTGRES_USER:-ai_eval}:${AI_EVAL_POSTGRES_PASSWORD:-local-poc-password}@postgres:5432/${AI_EVAL_POSTGRES_DB:-ai_eval}
+      DATABASE_URL: postgresql+psycopg://${AI_EVAL_POSTGRES_USER:-ai_eval}:${AI_EVAL_POSTGRES_PASSWORD:-local-poc-password}@postgres:5432/${AI_EVAL_POSTGRES_DB:-ai_eval}
+      AI_EVAL_DEMO_PROJECT_A_KEY: ${AI_EVAL_DEMO_PROJECT_A_KEY:-local-project-a-submit-read-review-key}
+      AI_EVAL_DEMO_PROJECT_B_KEY: ${AI_EVAL_DEMO_PROJECT_B_KEY:-local-project-b-submit-read-review-key}
+    command:
+      - /bin/sh
+      - -ec
+      - alembic upgrade head && python scripts/seed-api-client.py && exec uvicorn app.api.main:app --host 0.0.0.0 --port 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready', timeout=2)"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    ports:
+      - "${AI_EVAL_API_PORT:-8000}:8000"
+
+  worker:
+    build: .
+    environment:
+      AI_EVAL_DATABASE_URL: postgresql+psycopg://${AI_EVAL_POSTGRES_USER:-ai_eval}:${AI_EVAL_POSTGRES_PASSWORD:-local-poc-password}@postgres:5432/${AI_EVAL_POSTGRES_DB:-ai_eval}
+      AI_EVAL_WORKER_POLL_SECONDS: "0.2"
+      AI_EVAL_JOB_LEASE_SECONDS: "5"
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

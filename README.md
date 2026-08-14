@@ -1,6 +1,6 @@
 # AI Evaluation Service
 
-Batch-first MVP for evaluating AI application outputs. The first supported source app is `AI_Requirement_Tool`, with two artifact types:
+Central AI Platform evaluation capability POC with a preserved batch CLI and an asynchronous service API. The first supported source app is `AI_Requirement_Tool`, with two artifact types:
 
 - `requirement_backlog`
 - `pm_status_report`
@@ -89,3 +89,46 @@ AI_Requirement_Tool UI
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\quality-check.ps1
 ```
+
+## Local platform POC
+
+The local stack contains exactly three services: FastAPI, a PostgreSQL Job Worker, and PostgreSQL 16. The Worker provides at-least-once execution with an expiring lease; the unique result row and lease-owner check protect finalization. The optional LLM Judge is disabled, so no model credentials are required. Deterministic results, optional Judge annotations, and Human Review Evidence remain separate.
+
+Start from a clean local POC database:
+
+```powershell
+docker compose down -v
+docker compose up --build -d
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-poc.ps1
+```
+
+`docker compose down -v` removes only the `ai-evaluation-service-poc` Compose project's containers, network, and named PostgreSQL volume. Do not change the Compose project name to a broad or shared environment name.
+
+Local endpoints:
+
+- Swagger/OpenAPI: <http://localhost:8000/docs>
+- Liveness: <http://localhost:8000/health/live>
+- Readiness: <http://localhost:8000/health/ready>
+
+The committed keys are intentionally local demonstration credentials only:
+
+- Project A: `local-project-a-submit-read-review-key`
+- Project B: `local-project-b-submit-read-review-key`
+
+Both keys have `evaluation:submit`, `evaluation:read`, and `evaluation:review`. The seed command stores only SHA-256 hashes and is idempotent. Copy `.env.example` to `.env` to override local values; never reuse these keys or the local database password outside this disposable stack.
+
+Run the bounded expired-lease recovery evidence separately:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\smoke-poc.ps1 -TestLeaseRecovery
+```
+
+The normal smoke submits both supported artifact types, waits for `completed`, verifies `pass/optional` and `not_passed/required`, replays an idempotent submission, appends `approved` and `waived` review evidence, and verifies cross-project reads return `404`. The lease mode prepares one expired claimed Job while the Worker is stopped, restarts it, and verifies one result plus an incremented recovery count.
+
+State meanings:
+
+- `execution_status`: `queued`, `running`, `completed`, or `failed`; it describes processing only.
+- `machine_verdict`: `pass` or `not_passed`; it exists only after deterministic completion and never represents an execution failure.
+- `review_status`: `optional` for pass and `required` for not-passed until the latest append-only human decision becomes `approved`, `rejected`, or `waived`.
+
+Inspect the API and Worker logs with `docker compose logs api worker`. Log records contain only allowlisted correlation and status fields; payloads, API keys, prompts, credentials, and raw exceptions are intentionally excluded.
