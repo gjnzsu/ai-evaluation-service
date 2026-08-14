@@ -63,7 +63,7 @@ class EvaluationRepository:
                         evaluation_id=evaluation.id,
                         status="queued",
                         attempt_count=0,
-                        available_at=now,
+                        available_at=func.now(),
                         lease_owner=None,
                         lease_expires_at=None,
                         lease_recovery_count=0,

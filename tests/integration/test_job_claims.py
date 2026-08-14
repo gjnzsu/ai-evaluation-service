@@ -53,6 +53,40 @@ async def test_only_one_worker_claims_a_job(
 
 
 @pytest.mark.asyncio
+async def test_new_job_is_immediately_claimable_when_api_host_clock_is_ahead(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    class FarFutureApiClock:
+        @classmethod
+        def now(cls, timezone):
+            del timezone
+            return datetime(2100, 1, 1, tzinfo=UTC)
+
+    evaluations = EvaluationRepository(session_factory)
+    with patch("app.persistence.repositories.datetime", FarFutureApiClock):
+        evaluation, created = await evaluations.create_with_job(
+            "project-a",
+            "skewed-api-clock",
+            request("skewed-api-clock"),
+            "hash-skewed-api-clock",
+        )
+
+    async with session_factory() as session:
+        job = await session.get(EvaluationJobRow, evaluation.id)
+        database_now = await session.scalar(select(func.now()))
+
+    claimed = await JobRepository(session_factory).claim_next(
+        "worker-a", lease_seconds=60
+    )
+
+    assert created is True
+    assert job.available_at <= database_now
+    assert job.available_at >= database_now - timedelta(seconds=5)
+    assert claimed is not None
+    assert claimed.evaluation_id == evaluation.id
+
+
+@pytest.mark.asyncio
 async def test_expired_lease_is_reclaimed(
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
