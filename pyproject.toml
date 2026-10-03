@@ -9,11 +9,12 @@ dependencies = [
     "psycopg[binary,pool]>=3.2,<4",
     "pydantic>=2.0",
     "pydantic-settings>=2.5,<3",
-    "sqlalchemy>=2.0,<3",
+    "sqlalchemy[asyncio]>=2.0,<3",
     "uvicorn[standard]>=0.30,<1",
 ]
 
 [project.optional-dependencies]
+jev = ["typesafe-sdk==0.7.2"]
 dev = [
     "httpx>=0.27,<1",
     "pytest>=8.0",

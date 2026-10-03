@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from app.domain.models import EvaluationResult
 from app.domain.platform import ExecutionStatus, MachineVerdict, ReviewStatus
+from app.worker.decision import DecisionJudgeResult
 
 
 class ApiErrorDetail(BaseModel):
@@ -30,7 +31,7 @@ class EvaluationSubmission(BaseModel):
 
 
 class SafeWarning(BaseModel):
-    code: Literal["judge_degraded"]
+    code: Literal["judge_degraded", "decision_judge_degraded"]
 
 
 class ReviewEvidence(BaseModel):
@@ -69,6 +70,7 @@ class EvaluationDetail(BaseModel):
     review_status: ReviewStatus | None
     deterministic_result: DeterministicEvaluationResult | None
     llm_judge_result: dict[str, Any] | None
+    decision_judge_result: DecisionJudgeResult | None
     warnings: list[SafeWarning]
     review_history: list[ReviewEvidence]
     created_at: datetime

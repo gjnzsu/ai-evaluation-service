@@ -6,6 +6,8 @@ from uuid import uuid4
 import pytest
 
 from app.domain.models import EvaluationCase, EvaluationResult
+from app.worker.decision import RawDecision, material_quality_issue_policy
+from app.worker.decision_runtime import DecisionJudge
 from app.worker.judge import DisabledOptionalJudge
 from app.worker.service import WorkerService
 
@@ -24,6 +26,7 @@ class FakeJobs:
             evaluation_id=uuid4(),
             request_payload=request_payload or payload(),
             lease_owner="worker-a",
+            project_id="project-a",
         )
         self.claimed = False
         self.completed: dict | None = None
@@ -187,6 +190,7 @@ async def test_worker_persists_authoritative_deterministic_result(
     assert jobs.completed["machine_verdict"] == expected_verdict
     assert jobs.completed["deterministic_result"]["passed"] is passed
     assert jobs.completed["llm_judge_result"] is None
+    assert jobs.completed["decision_judge_result"] is None
     assert jobs.completed["warnings"] == []
     assert engine.case.case_id == "worker-case"
 
@@ -336,3 +340,121 @@ async def test_lease_renewal_error_is_treated_as_lost_ownership() -> None:
     assert jobs.renewed >= 1
     assert jobs.completed is None
     assert jobs.failed is None
+
+
+class FakeDecisionProvider:
+    def __init__(self, probability: float | None = 0.95) -> None:
+        self.probability = probability
+        self.calls = 0
+
+    def evaluate(self, case, deterministic_result, rubric):
+        del case, deterministic_result
+        self.calls += 1
+        if self.probability is None:
+            raise RuntimeError("provider-key-secret prompt-secret")
+        return RawDecision(
+            provider="jev", model="jev-pinned", rubric_version=rubric,
+            answer="yes" if self.probability >= 0.5 else "no",
+            p_yes=self.probability,
+        )
+
+
+def shadow_judge(provider: FakeDecisionProvider, projects=frozenset({"project-a"})):
+    return DecisionJudge(
+        provider, material_quality_issue_policy(), projects,
+        expected_provider="jev", expected_model="jev-pinned",
+    )
+
+
+@pytest.mark.asyncio
+async def test_shadow_disagreement_does_not_change_machine_verdict() -> None:
+    jobs = FakeJobs()
+    provider = FakeDecisionProvider(0.95)
+    worker = WorkerService(
+        jobs, StubEngine(passed=True), DisabledOptionalJudge(), "worker-a", 60,
+        decision_judge=shadow_judge(provider),
+    )
+
+    assert await worker.process_one() is True
+
+    assert jobs.completed["machine_verdict"] == "pass"
+    assert jobs.completed["decision_judge_result"]["answer"] == "yes"
+    assert (
+        jobs.completed["decision_judge_result"]["recommended_route"]
+        == "no_escalation_recommended"
+    )
+    assert jobs.completed["warnings"] == []
+    assert provider.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_uncertain_shadow_only_records_escalation_recommendation() -> None:
+    jobs = FakeJobs()
+    provider = FakeDecisionProvider(0.55)
+    worker = WorkerService(
+        jobs, StubEngine(passed=False), DisabledOptionalJudge(), "worker-a", 60,
+        decision_judge=shadow_judge(provider),
+    )
+    await worker.process_one()
+    assert jobs.completed["machine_verdict"] == "not_passed"
+    assert (
+        jobs.completed["decision_judge_result"]["recommended_route"]
+        == "llm_escalation_recommended"
+    )
+    assert jobs.completed["llm_judge_result"] is None
+    assert provider.calls == 1
+
+
+@pytest.mark.asyncio
+async def test_shadow_failure_degrades_without_secret_or_failed_job() -> None:
+    jobs = FakeJobs()
+    provider = FakeDecisionProvider(None)
+    worker = WorkerService(
+        jobs, StubEngine(), DisabledOptionalJudge(), "worker-a", 60,
+        decision_judge=shadow_judge(provider),
+    )
+    await worker.process_one()
+    assert jobs.completed["machine_verdict"] == "pass"
+    assert jobs.completed["decision_judge_result"] is None
+    assert jobs.completed["warnings"] == [{"code": "decision_judge_degraded"}]
+    assert jobs.failed is None
+    assert "secret" not in repr(jobs.completed)
+
+
+@pytest.mark.asyncio
+async def test_shadow_unsafe_provider_fields_are_not_persisted() -> None:
+    class UnsafeDecisionProvider:
+        def evaluate(self, case, deterministic_result, rubric):
+            del case, deterministic_result
+            return {
+                "provider": "jev", "model": "jev-pinned", "rubric_version": rubric,
+                "answer": "yes", "p_yes": 0.95,
+                "prompt": "private-input-secret", "credential": "provider-key-secret",
+            }
+
+    jobs = FakeJobs()
+    worker = WorkerService(
+        jobs, StubEngine(), DisabledOptionalJudge(), "worker-a", 60,
+        decision_judge=shadow_judge(UnsafeDecisionProvider()),
+    )
+
+    assert await worker.process_one() is True
+    assert jobs.completed["machine_verdict"] == "pass"
+    assert jobs.completed["decision_judge_result"] is None
+    assert jobs.completed["warnings"] == [{"code": "decision_judge_degraded"}]
+    assert "secret" not in repr(jobs.completed)
+
+
+@pytest.mark.asyncio
+async def test_unlisted_project_never_calls_shadow_provider() -> None:
+    jobs = FakeJobs()
+    jobs.job.project_id = "project-b"
+    provider = FakeDecisionProvider()
+    worker = WorkerService(
+        jobs, StubEngine(), DisabledOptionalJudge(), "worker-a", 60,
+        decision_judge=shadow_judge(provider),
+    )
+    await worker.process_one()
+    assert jobs.completed["decision_judge_result"] is None
+    assert jobs.completed["warnings"] == []
+    assert provider.calls == 0

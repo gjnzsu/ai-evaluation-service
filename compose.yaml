@@ -38,11 +38,18 @@ services:
       - "${AI_EVAL_API_PORT:-8000}:8000"
 
   worker:
-    build: .
+    build:
+      context: .
+      args:
+        INSTALL_JEV: ${AI_EVAL_INSTALL_JEV:-false}
     environment:
       AI_EVAL_DATABASE_URL: postgresql+psycopg://${AI_EVAL_POSTGRES_USER:-ai_eval}:${AI_EVAL_POSTGRES_PASSWORD:-local-poc-password}@postgres:5432/${AI_EVAL_POSTGRES_DB:-ai_eval}
       AI_EVAL_WORKER_POLL_SECONDS: "0.2"
       AI_EVAL_JOB_LEASE_SECONDS: "5"
+      AI_EVAL_DECISION_JUDGE_PROVIDER: ${AI_EVAL_DECISION_JUDGE_PROVIDER:-disabled}
+      AI_EVAL_DECISION_JUDGE_MODEL: ${AI_EVAL_DECISION_JUDGE_MODEL:-}
+      AI_EVAL_DECISION_JUDGE_PROJECTS: ${AI_EVAL_DECISION_JUDGE_PROJECTS:-}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
     command: ["python", "-m", "app.worker"]
     depends_on:
       api:

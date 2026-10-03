@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.engine import EvaluationEngine
 from app.persistence.models import EvaluationJobRow, EvaluationResultRow, EvaluationRow
 from app.persistence.repositories import EvaluationRepository, JobRepository
+from app.worker.decision import RawDecision, material_quality_issue_policy
+from app.worker.decision_runtime import DecisionJudge
 from app.worker.judge import DisabledOptionalJudge
 from app.worker.service import WorkerService
 
@@ -45,6 +47,7 @@ async def test_only_one_worker_claims_a_job(
     claimed = [job for job in (first, second) if job is not None]
     assert len(claimed) == 1
     assert claimed[0].evaluation_id == evaluation.id
+    assert claimed[0].project_id == "project-a"
     assert claimed[0].attempt_count == 1
     async with session_factory() as session:
         assert (
@@ -373,4 +376,64 @@ async def test_worker_degrades_unsafe_judge_output_before_jsonb_persistence(
         assert result.deterministic_result is not None
         assert result.llm_judge_result is None
         assert result.warnings == [{"code": "judge_degraded"}]
+        assert "secret" not in repr(result.warnings)
+
+
+@pytest.mark.asyncio
+async def test_shadow_result_is_durable_without_changing_review_policy(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    evaluation = await create_queued(session_factory, "shadow-durable")
+
+    class ShadowProvider:
+        def evaluate(self, case, deterministic_result, rubric):
+            del case, deterministic_result
+            return RawDecision(
+                provider="jev", model="jev-pinned", rubric_version=rubric,
+                answer="yes", p_yes=0.95,
+            )
+
+    worker = WorkerService(
+        JobRepository(session_factory), EvaluationEngine(), DisabledOptionalJudge(),
+        "worker-a", 60,
+        decision_judge=DecisionJudge(
+            ShadowProvider(), material_quality_issue_policy(), frozenset({"project-a"}),
+            expected_provider="jev", expected_model="jev-pinned",
+        ),
+    )
+    assert await worker.process_one() is True
+
+    evaluations = EvaluationRepository(session_factory)
+    result = await evaluations.get_result_for_project(evaluation.id, "project-a")
+    assert result.machine_verdict == "not_passed"
+    assert result.decision_judge_result["p_yes"] == 0.95
+    assert result.llm_judge_result is None
+    assert await evaluations.get_result_for_project(evaluation.id, "project-b") is None
+
+
+@pytest.mark.asyncio
+async def test_shadow_provider_failure_persists_only_safe_warning(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    evaluation = await create_queued(session_factory, "shadow-failure")
+
+    class FailingProvider:
+        def evaluate(self, case, deterministic_result, rubric):
+            del case, deterministic_result, rubric
+            raise RuntimeError("private-input-secret")
+
+    worker = WorkerService(
+        JobRepository(session_factory), EvaluationEngine(), DisabledOptionalJudge(),
+        "worker-a", 60,
+        decision_judge=DecisionJudge(
+            FailingProvider(), material_quality_issue_policy(), frozenset({"project-a"}),
+            expected_provider="jev", expected_model="jev-pinned",
+        ),
+    )
+    assert await worker.process_one() is True
+    async with session_factory() as session:
+        result = await session.get(EvaluationResultRow, evaluation.id)
+        assert result.machine_verdict == "not_passed"
+        assert result.decision_judge_result is None
+        assert result.warnings == [{"code": "decision_judge_degraded"}]
         assert "secret" not in repr(result.warnings)

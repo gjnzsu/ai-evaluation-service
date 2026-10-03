@@ -8,6 +8,7 @@ from uuid import UUID
 from app.domain.models import EvaluationCase, EvaluationResult
 from app.domain.platform import MachineVerdict
 from app.observability.logging import log_safe
+from app.worker.decision_runtime import DecisionJudge
 from app.worker.judge import OptionalJudge, normalize_judge_result
 
 
@@ -35,10 +36,13 @@ class WorkerService:
         judge: OptionalJudge,
         worker_id: str,
         lease_seconds: float,
+        *,
+        decision_judge: DecisionJudge | None = None,
     ) -> None:
         self._jobs = jobs
         self._engine = engine
         self._judge = judge
+        self._decision_judge = decision_judge
         self._worker_id = worker_id
         self._lease_seconds = lease_seconds
         self._logger = logging.getLogger("ai_evaluation_service")
@@ -73,6 +77,10 @@ class WorkerService:
             llm_judge_result, warnings = await self._evaluate_judge(
                 case, deterministic_result
             )
+            decision_judge_result, decision_warnings = await self._evaluate_decision(
+                job.project_id, case, deterministic_result
+            )
+            warnings.extend(decision_warnings)
         except Exception:
             await self._stop_renewal(renewal)
             if not ownership_lost.is_set():
@@ -116,6 +124,7 @@ class WorkerService:
                 machine_verdict=verdict.value,
                 evaluator_version="deterministic-v1",
                 llm_judge_result=llm_judge_result,
+                decision_judge_result=decision_judge_result,
                 warnings=warnings,
             )
         except Exception:
@@ -157,6 +166,22 @@ class WorkerService:
             return normalize_judge_result(judged), []
         except Exception:
             return None, [{"code": "judge_degraded"}]
+
+    async def _evaluate_decision(
+        self,
+        project_id: str,
+        case: EvaluationCase,
+        deterministic_result: EvaluationResult,
+    ) -> tuple[dict | None, list[dict]]:
+        if self._decision_judge is None:
+            return None, []
+        try:
+            result = await asyncio.to_thread(
+                self._decision_judge.evaluate, project_id, case, deterministic_result
+            )
+            return (result.model_dump(mode="json") if result is not None else None), []
+        except Exception:
+            return None, [{"code": "decision_judge_degraded"}]
 
     async def _renew_lease(
         self, evaluation_id: UUID, ownership_lost: asyncio.Event

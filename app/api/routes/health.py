@@ -30,7 +30,7 @@ async def ready(request: Request) -> ReadinessResponse | JSONResponse:
             revision = await session.scalar(
                 text("SELECT version_num FROM alembic_version")
             )
-        if revision != "0001_platform_poc":
+        if revision != "0002_shadow_decision_judge":
             raise RuntimeError("migration check failed")
     except Exception:
         return JSONResponse(status_code=503, content={"status": "not_ready"})

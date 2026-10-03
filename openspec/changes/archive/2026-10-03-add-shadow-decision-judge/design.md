@@ -44,7 +44,7 @@ Jev is disabled by default. Enabling requires `AI_EVAL_DECISION_JUDGE_PROVIDER=j
 
 ### 5. Safe degradation
 
-If an enabled provider times out, raises, or returns invalid data, the Worker completes with the deterministic result, stores `decision_judge_result = null`, and adds only `{"code": "decision_judge_degraded"}`. Existing `judge_degraded` remains valid for the legacy optional LLM path. Safe logs contain provider type and a stable code, never the exception or submitted data. The existing lease-renewal and owner-guarded finalization behavior remains in force during the provider call.
+If an enabled provider times out, raises, or returns invalid data, the Worker completes with the deterministic result, stores `decision_judge_result = null`, and adds only `{"code": "decision_judge_degraded"}`. Existing `judge_degraded` remains valid for the legacy optional LLM path. Only allowlisted service status fields are logged; the provider exception and submitted data are never logged. SDK logging is suppressed because its debug mode may include request and response bodies. The existing lease-renewal and owner-guarded finalization behavior remains in force during the provider call.
 
 ### 6. Calibration evidence
 

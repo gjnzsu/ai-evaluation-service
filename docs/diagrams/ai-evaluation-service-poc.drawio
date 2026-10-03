@@ -1,6 +1,6 @@
 <mxfile host="Electron" modified="2026-08-13T10:30:00.000Z" agent="Codex" version="24.7.17" type="device">
   <diagram id="architecture" name="01 Service Architecture">
-    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0" adaptiveColors="auto">
+    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="900" math="0" shadow="0" adaptiveColors="auto">
       <root>
         <mxCell id="0"/>
         <mxCell id="1" parent="0"/>
@@ -22,7 +22,7 @@
         <mxCell id="api" value="&lt;b&gt;REST API&lt;/b&gt;&lt;br&gt;提交 · 查询 · 审核&lt;br&gt;鉴权 · OpenAPI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="evalsvc">
           <mxGeometry x="40" y="70" width="180" height="90" as="geometry"/>
         </mxCell>
-        <mxCell id="postgres" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;br&gt;评估 · 任务&lt;br&gt;结果 · 审核记录" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="evalsvc">
+        <mxCell id="postgres" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;br&gt;评估 + 任务&lt;br&gt;确定性 + shadow 结果&lt;br&gt;人工审核证据" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="evalsvc">
           <mxGeometry x="500" y="65" width="190" height="105" as="geometry"/>
         </mxCell>
         <mxCell id="worker" value="&lt;b&gt;Worker&lt;/b&gt;&lt;br&gt;领取 · 租约&lt;br&gt;过期租约恢复" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="evalsvc">
@@ -31,8 +31,14 @@
         <mxCell id="engine" value="&lt;b&gt;Evaluation Engine&lt;/b&gt;&lt;br&gt;评估器注册表&lt;br&gt;确定性规则" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="evalsvc">
           <mxGeometry x="500" y="240" width="190" height="90" as="geometry"/>
         </mxCell>
-        <mxCell id="judge" value="&lt;b&gt;可选 LLM Judge&lt;/b&gt;&lt;br&gt;默认关闭&lt;br&gt;失败时安全降级" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="evalsvc">
+        <mxCell id="legacyjudge" value="&lt;b&gt;原有 LLM Judge&lt;/b&gt;&lt;br&gt;可选；保持兼容&lt;br&gt;llm_judge_result" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" vertex="1" parent="evalsvc">
+          <mxGeometry x="40" y="380" width="180" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="judge" value="&lt;b&gt;Decision Judge&lt;/b&gt;&lt;br&gt;项目白名单 + rubric gate&lt;br&gt;仅记录 shadow 结果" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="evalsvc">
           <mxGeometry x="500" y="380" width="190" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="jev" value="&lt;b&gt;TypeSafe Jev&lt;/b&gt;&lt;br&gt;外部决策模型服务&lt;br&gt;仅显式启用时调用" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1480" y="505" width="200" height="90" as="geometry"/>
         </mxCell>
         <mxCell id="platformops" value="&lt;b&gt;上层平台职责&lt;/b&gt;&lt;br&gt;Gateway 身份（未来）&lt;br&gt;业务 UI · 发布流程&lt;br&gt;成本 / 可观测性关联" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" vertex="1" parent="platform">
           <mxGeometry x="850" y="130" width="220" height="140" as="geometry"/>
@@ -40,8 +46,8 @@
         <mxCell id="ops" value="&lt;b&gt;POC 基础运维&lt;/b&gt;&lt;br&gt;健康检查&lt;br&gt;安全字段白名单日志" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="platform">
           <mxGeometry x="850" y="340" width="220" height="110" as="geometry"/>
         </mxCell>
-        <mxCell id="note1" value="POC 部署：api + worker + postgres&lt;br&gt;同一代码库与镜像，不同启动命令" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="340" y="760" width="430" height="80" as="geometry"/>
+        <mxCell id="note1" value="虚线 = 可选路径。Jev 默认关闭，不改变 machine_verdict 或 HITL 状态。&lt;br&gt;置信度门只记录 LLM 升级建议，不自动调用第二个模型。" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="340" y="760" width="840" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="a1" value="REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" source="consumer1" target="api" parent="1">
           <mxGeometry relative="1" as="geometry"/>
@@ -58,13 +64,19 @@
         <mxCell id="a5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" edge="1" source="worker" target="engine" parent="1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="a6" value="optional" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="engine" target="judge" parent="1">
+        <mxCell id="a6" value="shadow" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#82b366;" edge="1" source="engine" target="judge" parent="1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="a7" value="result" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="engine" target="postgres" parent="1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="a8" value="signals" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeColor=#666666;" edge="1" source="evalsvc" target="ops" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a9" value="可选" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="worker" target="legacyjudge" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="a10" value="白名单项目" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" source="judge" target="jev" parent="1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
       </root>
@@ -108,23 +120,26 @@
         <mxCell id="fw-claim" value="领取可执行 Job&lt;br&gt;租约 + 尝试次数" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="lane-worker">
           <mxGeometry x="660" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="fe-eval" value="确定性评估&lt;br&gt;Judge 失败安全降级" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane-engine">
+        <mxCell id="fe-eval" value="确定性评估&lt;br&gt;权威 machine_verdict" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane-engine">
           <mxGeometry x="840" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="fd-complete" value="结果 + 状态&lt;br&gt;同一事务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
+        <mxCell id="fw-decision" value="可选 Decision Judge&lt;br&gt;Jev 置信度门" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-worker">
           <mxGeometry x="1020" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="fc-poll" value="GET evaluation&lt;br&gt;轮询结果" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
+        <mxCell id="fd-complete" value="确定性 + shadow&lt;br&gt;当前租约持有者事务" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
           <mxGeometry x="1200" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="fc-review" value="POST review&lt;br&gt;追加审核证据" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
+        <mxCell id="fc-poll" value="GET evaluation&lt;br&gt;轮询结果" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
           <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="fw-recover" value="租约过期？&lt;br&gt;由其他 Worker 重新领取" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="lane-worker">
-          <mxGeometry x="1200" y="35" width="140" height="80" as="geometry"/>
+        <mxCell id="fc-review" value="POST review&lt;br&gt;追加审核证据" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
+          <mxGeometry x="1560" y="45" width="140" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="fw-recover" value="租约过期：&lt;br&gt;其他 Worker 重新领取" style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="lane-worker">
+          <mxGeometry x="1560" y="35" width="140" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="fd-review" value="追加审核记录&lt;br&gt;永不覆盖" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
-          <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="1560" y="45" width="140" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="fedge1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fc-submit" target="fa-validate" parent="f1">
           <mxGeometry relative="1" as="geometry"/>
@@ -141,13 +156,10 @@
         <mxCell id="fedge5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fw-claim" target="fe-eval" parent="f1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="fedge6" value="success" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="fe-eval" target="fd-complete" parent="f1">
+        <mxCell id="fedge6" value="可选" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#82b366;" edge="1" source="fe-eval" target="fw-decision" parent="f1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="fedge7" value="crash / timeout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="fe-eval" target="fw-recover" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="fedge8" value="重新领取" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="fw-recover" target="fw-claim" parent="f1">
+        <mxCell id="fedge7" value="shadow 或 null" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="fw-decision" target="fd-complete" parent="f1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="fedge9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fd-complete" target="fc-poll" parent="f1">
@@ -155,6 +167,9 @@
         </mxCell>
         <mxCell id="fedge10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fc-review" target="fd-review" parent="f1">
           <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="fshadow-note" value="Jev 默认关闭，只有白名单项目能调用。中间置信度只记录 LLM 升级建议；模型故障写入 decision_judge_degraded，任务仍按确定性结果完成。" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="f1">
+          <mxGeometry x="480" y="820" width="1010" height="70" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>
@@ -191,7 +206,7 @@
         <mxCell id="se3" value="不可恢复错误" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#b85450;" edge="1" source="sr" target="sf" parent="s1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="sretry-note" value="租约过期：Job 可被重新领取；Judge 失败仍以确定性结果 completed" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="sexec">
+        <mxCell id="sretry-note" value="租约过期：Job 可重新领取。可选 Judge 失败仍按确定性结果完成。" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="sexec">
           <mxGeometry x="850" y="60" width="330" height="80" as="geometry"/>
         </mxCell>
         <mxCell id="sverdict" value="评估完成后的机器判定 machine_verdict" style="swimlane;startSize=32;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;html=1;" vertex="1" parent="s1">
@@ -244,6 +259,9 @@
         </mxCell>
         <mxCell id="snote" value="每次审核都追加一条不可变记录；机器评估结果永不修改。" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="s1">
           <mxGeometry x="960" y="330" width="340" height="90" as="geometry"/>
+        </mxCell>
+        <mxCell id="sshadow-note" value="decision_judge_result 仅为 shadow 证据。Jev 的置信度与路由建议不改变 machine_verdict 或 review_status。" style="shape=note;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="s1">
+          <mxGeometry x="40" y="770" width="1320" height="60" as="geometry"/>
         </mxCell>
       </root>
     </mxGraphModel>

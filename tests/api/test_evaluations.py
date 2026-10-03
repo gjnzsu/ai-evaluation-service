@@ -266,6 +266,7 @@ def test_queued_detail_keeps_machine_and_review_status_null(client: TestClient) 
     assert response.json()["machine_verdict"] is None
     assert response.json()["review_status"] is None
     assert response.json()["deterministic_result"] is None
+    assert response.json()["decision_judge_result"] is None
 
 
 def test_cross_project_detail_is_hidden_as_404(client: TestClient) -> None:
@@ -325,6 +326,13 @@ def test_completed_detail_keeps_result_judge_warning_and_reviews_separate(
         machine_verdict="not_passed",
         evaluator_version="requirement_backlog-v1",
         llm_judge_result={"label": "unclear"},
+        decision_judge_result={
+            "provider": "jev", "model": "jev-pinned",
+            "rubric_version": "material_quality_issue_v1", "policy_version": "v1",
+            "answer": "yes", "p_yes": 0.95,
+            "accept_negative_at": 0.1, "accept_positive_at": 0.9,
+            "recommended_route": "no_escalation_recommended",
+        },
         warnings=[{"code": "judge_degraded"}],
         completed_at=now,
     )
@@ -354,6 +362,7 @@ def test_completed_detail_keeps_result_judge_warning_and_reviews_separate(
         == "requirement_backlog-v1"
     )
     assert body["llm_judge_result"] == {"label": "unclear"}
+    assert body["decision_judge_result"]["p_yes"] == 0.95
     assert body["warnings"] == [{"code": "judge_degraded"}]
     assert [item["decision"] for item in body["review_history"]] == ["waived"]
 

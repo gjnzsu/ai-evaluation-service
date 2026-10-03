@@ -23,6 +23,8 @@ def test_openapi_contains_all_poc_operations() -> None:
         for parameter in review_parameters
     )
     assert "ApiErrorResponse" in document["components"]["schemas"]
+    detail_schema = document["components"]["schemas"]["EvaluationDetail"]
+    assert "decision_judge_result" in detail_schema["properties"]
     assert {"401", "403", "404", "422"} <= set(
         paths["/v1/evaluations/{evaluation_id}/reviews"]["post"]["responses"]
     )

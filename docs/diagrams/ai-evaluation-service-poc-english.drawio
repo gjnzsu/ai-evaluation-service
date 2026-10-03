@@ -1,71 +1,83 @@
-<mxfile host="Electron" modified="2026-08-13T10:30:00.000Z" agent="Codex" version="24.7.17" type="device">
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.6.6 Chrome/144.0.7559.236 Electron/40.8.4 Safari/537.36" version="29.6.6" pages="3">
   <diagram id="architecture" name="01 Service Architecture">
-    <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0" adaptiveColors="auto">
+    <mxGraphModel dx="1828" dy="1085" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="900" math="0" shadow="0" adaptiveColors="auto">
       <root>
-        <mxCell id="0"/>
-        <mxCell id="1" parent="0"/>
-        <mxCell id="title1" value="AI Evaluation Service POC — Central AI Platform Shared Capability" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" vertex="1" parent="1">
-          <mxGeometry x="40" y="20" width="900" height="40" as="geometry"/>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title1" parent="1" style="text;html=1;fontSize=22;fontStyle=1;align=left;verticalAlign=middle;" value="AI Evaluation Service POC — Central AI Platform Shared Capability" vertex="1">
+          <mxGeometry height="40" width="900" x="40" y="20" as="geometry" />
         </mxCell>
-        <mxCell id="consumer1" value="&lt;b&gt;AI_Requirement_Tool&lt;/b&gt;&lt;br&gt;First consumer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="40" y="140" width="180" height="80" as="geometry"/>
+        <mxCell id="consumer1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" value="&lt;b&gt;AI_Requirement_Tool&lt;/b&gt;&lt;br&gt;First consumer" vertex="1">
+          <mxGeometry height="80" width="180" x="40" y="140" as="geometry" />
         </mxCell>
-        <mxCell id="consumer2" value="&lt;b&gt;Future AI Apps&lt;/b&gt;&lt;br&gt;Reuse the versioned API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" vertex="1" parent="1">
-          <mxGeometry x="40" y="280" width="180" height="80" as="geometry"/>
+        <mxCell id="consumer2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" value="&lt;b&gt;Future AI Apps&lt;/b&gt;&lt;br&gt;Reuse the versioned API" vertex="1">
+          <mxGeometry height="80" width="180" x="40" y="280" as="geometry" />
         </mxCell>
-        <mxCell id="platform" value="Central AI Platform" style="swimlane;startSize=34;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=16;html=1;" vertex="1" parent="1">
-          <mxGeometry x="300" y="80" width="1120" height="650" as="geometry"/>
+        <mxCell id="platform" parent="1" style="swimlane;startSize=34;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;fontSize=16;html=1;" value="Central AI Platform" vertex="1">
+          <mxGeometry height="650" width="1120" x="300" y="80" as="geometry" />
         </mxCell>
-        <mxCell id="evalsvc" value="AI Evaluation Service" style="swimlane;startSize=34;fillColor=#e8f4f8;strokeColor=#6c8ebf;fontStyle=1;fontSize=16;html=1;" vertex="1" parent="platform">
-          <mxGeometry x="40" y="60" width="760" height="500" as="geometry"/>
+        <mxCell id="evalsvc" parent="platform" style="swimlane;startSize=34;fillColor=#e8f4f8;strokeColor=#6c8ebf;fontStyle=1;fontSize=16;html=1;" value="AI Evaluation Service" vertex="1">
+          <mxGeometry height="500" width="760" x="40" y="60" as="geometry" />
         </mxCell>
-        <mxCell id="api" value="&lt;b&gt;REST API&lt;/b&gt;&lt;br&gt;Submit · Query · Review&lt;br&gt;Authorization · OpenAPI" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" vertex="1" parent="evalsvc">
-          <mxGeometry x="40" y="70" width="180" height="90" as="geometry"/>
+        <mxCell id="api" parent="evalsvc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" value="&lt;b&gt;REST API&lt;/b&gt;&lt;br&gt;Submit · Query · Review&lt;br&gt;Authorization · OpenAPI" vertex="1">
+          <mxGeometry height="90" width="180" x="40" y="70" as="geometry" />
         </mxCell>
-        <mxCell id="postgres" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;br&gt;Evaluations · Jobs&lt;br&gt;Results · Review records" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="evalsvc">
-          <mxGeometry x="500" y="65" width="190" height="105" as="geometry"/>
+        <mxCell id="postgres" parent="evalsvc" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" value="&lt;b&gt;PostgreSQL&lt;/b&gt;&lt;br&gt;Jobs + evaluations&lt;br&gt;Deterministic + shadow results&lt;br&gt;Review evidence" vertex="1">
+          <mxGeometry height="105" width="190" x="500" y="65" as="geometry" />
         </mxCell>
-        <mxCell id="worker" value="&lt;b&gt;Worker&lt;/b&gt;&lt;br&gt;Claim · Lease&lt;br&gt;Expired-lease recovery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" vertex="1" parent="evalsvc">
-          <mxGeometry x="270" y="240" width="180" height="90" as="geometry"/>
+        <mxCell id="worker" parent="evalsvc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" value="&lt;b&gt;Worker&lt;/b&gt;&lt;br&gt;Claim · Lease&lt;br&gt;Expired-lease recovery" vertex="1">
+          <mxGeometry height="90" width="180" x="270" y="240" as="geometry" />
         </mxCell>
-        <mxCell id="engine" value="&lt;b&gt;Evaluation Engine&lt;/b&gt;&lt;br&gt;Evaluator registry&lt;br&gt;Deterministic rules" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" vertex="1" parent="evalsvc">
-          <mxGeometry x="500" y="240" width="190" height="90" as="geometry"/>
+        <mxCell id="engine" parent="evalsvc" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" value="&lt;b&gt;Evaluation Engine&lt;/b&gt;&lt;br&gt;Evaluator registry&lt;br&gt;Deterministic rules" vertex="1">
+          <mxGeometry height="90" width="190" x="500" y="240" as="geometry" />
         </mxCell>
-        <mxCell id="judge" value="&lt;b&gt;Optional LLM Judge&lt;/b&gt;&lt;br&gt;Disabled by default&lt;br&gt;Safe degradation on failure" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" vertex="1" parent="evalsvc">
-          <mxGeometry x="500" y="380" width="190" height="90" as="geometry"/>
+        <mxCell id="legacyjudge" parent="evalsvc" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=13;" value="&lt;b&gt;Legacy LLM Judge&lt;/b&gt;&lt;br&gt;Optional; unchanged&lt;br&gt;llm_judge_result" vertex="1">
+          <mxGeometry height="90" width="180" x="40" y="380" as="geometry" />
         </mxCell>
-        <mxCell id="platformops" value="&lt;b&gt;Platform responsibilities&lt;/b&gt;&lt;br&gt;Gateway identity (future)&lt;br&gt;Business UI · Release workflow&lt;br&gt;Cost / observability join" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" vertex="1" parent="platform">
-          <mxGeometry x="850" y="130" width="220" height="140" as="geometry"/>
+        <mxCell id="judge" parent="evalsvc" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" value="&lt;b&gt;Decision Judge&lt;/b&gt;&lt;br&gt;Project allowlist + rubric gate&lt;br&gt;Shadow result only" vertex="1">
+          <mxGeometry height="90" width="190" x="500" y="380" as="geometry" />
         </mxCell>
-        <mxCell id="ops" value="&lt;b&gt;POC basic operations&lt;/b&gt;&lt;br&gt;Health checks&lt;br&gt;Allowlisted safe logs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" vertex="1" parent="platform">
-          <mxGeometry x="850" y="340" width="220" height="110" as="geometry"/>
+        <mxCell id="platformops" parent="platform" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" value="&lt;b&gt;Platform responsibilities&lt;/b&gt;&lt;br&gt;Gateway identity (future)&lt;br&gt;Business UI · Release workflow&lt;br&gt;Cost / observability join" vertex="1">
+          <mxGeometry height="140" width="220" x="850" y="130" as="geometry" />
         </mxCell>
-        <mxCell id="note1" value="POC deployment: api + worker + postgres&lt;br&gt;One codebase and image, separate commands" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
-          <mxGeometry x="340" y="760" width="430" height="80" as="geometry"/>
+        <mxCell id="ops" parent="platform" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" value="&lt;b&gt;POC basic operations&lt;/b&gt;&lt;br&gt;Health checks&lt;br&gt;Allowlisted safe logs" vertex="1">
+          <mxGeometry height="110" width="220" x="850" y="340" as="geometry" />
         </mxCell>
-        <mxCell id="a1" value="REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" source="consumer1" target="api" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="jev" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" value="&lt;b&gt;TypeSafe Jev&lt;/b&gt;&lt;br&gt;External decision provider&lt;br&gt;Opt-in only" vertex="1">
+          <mxGeometry height="90" width="200" x="1480" y="520" as="geometry" />
         </mxCell>
-        <mxCell id="a2" value="REST" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;" edge="1" source="consumer2" target="api" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="note1" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" value="Dashed = optional. Jev is disabled by default and never changes machine_verdict or HITL status.&lt;br&gt;The confidence gate records an LLM escalation recommendation only; no second model is called." vertex="1">
+          <mxGeometry height="80" width="840" x="340" y="760" as="geometry" />
         </mxCell>
-        <mxCell id="a3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="api" target="postgres" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="a1" edge="1" parent="1" source="consumer1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;" target="api" value="REST">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="a4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="postgres" target="worker" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="a2" edge="1" parent="1" source="consumer2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#6c8ebf;" target="api" value="REST">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="a5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" edge="1" source="worker" target="engine" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="a3" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" target="postgres" value="">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="a6" value="optional" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="engine" target="judge" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="a4" edge="1" parent="1" source="postgres" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" target="worker" value="">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="a7" value="result" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="engine" target="postgres" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="a5" edge="1" parent="1" source="worker" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#9673a6;" target="engine" value="">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="a8" value="signals" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeColor=#666666;" edge="1" source="evalsvc" target="ops" parent="1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="a6" edge="1" parent="1" source="engine" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#82b366;" target="judge" value="shadow">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a7" edge="1" parent="1" source="engine" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" target="postgres" value="result">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a8" edge="1" parent="1" source="evalsvc" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeColor=#666666;" target="ops" value="signals">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a9" edge="1" parent="1" source="worker" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" target="legacyjudge" value="optional">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="a10" edge="1" parent="1" source="judge" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#6c8ebf;" target="jev" value="allowlisted">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
@@ -73,88 +85,91 @@
   <diagram id="async-flow" name="02 Async Evaluation Flow">
     <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="950" math="0" shadow="0" adaptiveColors="auto">
       <root>
-        <mxCell id="f0"/>
-        <mxCell id="f1" parent="f0"/>
+        <mxCell id="f0" />
+        <mxCell id="f1" parent="f0" />
         <mxCell id="ftitle" value="Asynchronous Evaluation and Failure Recovery Flow" style="text;html=1;fontSize=22;fontStyle=1;align=left;" vertex="1" parent="f1">
-          <mxGeometry x="20" y="10" width="700" height="30" as="geometry"/>
+          <mxGeometry x="20" y="10" width="700" height="30" as="geometry" />
         </mxCell>
         <mxCell id="lane-consumer" value="Consumer" style="swimlane;horizontal=0;startSize=110;fillColor=#f5f5f5;html=1;fontStyle=1;fontSize=14;" vertex="1" parent="f1">
-          <mxGeometry x="0" y="50" width="1740" height="150" as="geometry"/>
+          <mxGeometry x="0" y="50" width="1740" height="150" as="geometry" />
         </mxCell>
         <mxCell id="lane-api" value="REST API" style="swimlane;horizontal=0;startSize=110;fillColor=#e8f4f8;html=1;fontStyle=1;fontSize=14;" vertex="1" parent="f1">
-          <mxGeometry x="0" y="200" width="1740" height="150" as="geometry"/>
+          <mxGeometry x="0" y="200" width="1740" height="150" as="geometry" />
         </mxCell>
         <mxCell id="lane-db" value="PostgreSQL" style="swimlane;horizontal=0;startSize=110;fillColor=#e8f5e9;html=1;fontStyle=1;fontSize=14;" vertex="1" parent="f1">
-          <mxGeometry x="0" y="350" width="1740" height="150" as="geometry"/>
+          <mxGeometry x="0" y="350" width="1740" height="150" as="geometry" />
         </mxCell>
         <mxCell id="lane-worker" value="Worker" style="swimlane;horizontal=0;startSize=110;fillColor=#fff0e6;html=1;fontStyle=1;fontSize=14;" vertex="1" parent="f1">
-          <mxGeometry x="0" y="500" width="1740" height="150" as="geometry"/>
+          <mxGeometry x="0" y="500" width="1740" height="150" as="geometry" />
         </mxCell>
         <mxCell id="lane-engine" value="Evaluation Engine" style="swimlane;horizontal=0;startSize=110;fillColor=#fce4ec;html=1;fontStyle=1;fontSize=14;" vertex="1" parent="f1">
-          <mxGeometry x="0" y="650" width="1740" height="150" as="geometry"/>
+          <mxGeometry x="0" y="650" width="1740" height="150" as="geometry" />
         </mxCell>
         <mxCell id="fc-submit" value="POST evaluation&lt;br&gt;+ Idempotency-Key" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
-          <mxGeometry x="120" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="120" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="fa-validate" value="Authorize&lt;br&gt;Validate request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane-api">
-          <mxGeometry x="300" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="300" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="fd-create" value="One transaction&lt;br&gt;Evaluation + Job" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
-          <mxGeometry x="480" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="480" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="fa-accept" value="202 Accepted&lt;br&gt;evaluation_id" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="lane-api">
-          <mxGeometry x="660" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="660" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="fw-claim" value="Claim eligible Job&lt;br&gt;Lease + attempt count" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="lane-worker">
-          <mxGeometry x="660" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="660" y="45" width="140" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="fe-eval" value="Deterministic evaluation&lt;br&gt;Judge failure degrades safely" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane-engine">
-          <mxGeometry x="840" y="45" width="140" height="60" as="geometry"/>
+        <mxCell id="fe-eval" value="Deterministic evaluation&lt;br&gt;Authoritative verdict" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="lane-engine">
+          <mxGeometry x="840" y="45" width="140" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="fd-complete" value="Result + status&lt;br&gt;One transaction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
-          <mxGeometry x="1020" y="45" width="140" height="60" as="geometry"/>
+        <mxCell id="fw-decision" value="Optional Decision Judge&lt;br&gt;Jev confidence gate" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-worker">
+          <mxGeometry x="1020" y="45" width="140" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="fd-complete" value="Deterministic + shadow&lt;br&gt;One owned transaction" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
+          <mxGeometry x="1200" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="fc-poll" value="GET evaluation&lt;br&gt;Poll result" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
-          <mxGeometry x="1200" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="1380" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="fc-review" value="POST review&lt;br&gt;Append review evidence" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="lane-consumer">
-          <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="1560" y="45" width="140" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="fw-recover" value="Lease expired?&lt;br&gt;Reclaim by another Worker" style="rhombus;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="lane-worker">
-          <mxGeometry x="1200" y="35" width="140" height="80" as="geometry"/>
+        <mxCell id="fw-recover" value="Expired lease:&lt;br&gt;another Worker reclaims" style="shape=note;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="lane-worker">
+          <mxGeometry x="1560" y="35" width="140" height="80" as="geometry" />
         </mxCell>
         <mxCell id="fd-review" value="Append review record&lt;br&gt;Never overwrite" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="lane-db">
-          <mxGeometry x="1380" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="1560" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="fedge1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fc-submit" target="fa-validate" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fedge2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fa-validate" target="fd-create" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fedge3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fd-create" target="fa-accept" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fedge4" value="SKIP LOCKED" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="fd-create" target="fw-claim" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fedge5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fw-claim" target="fe-eval" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="fedge6" value="success" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="fe-eval" target="fd-complete" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="fedge6" value="optional" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#82b366;" edge="1" source="fe-eval" target="fw-decision" parent="f1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="fedge7" value="crash / timeout" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="fe-eval" target="fw-recover" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
-        </mxCell>
-        <mxCell id="fedge8" value="reclaim" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;dashed=1;strokeWidth=2;strokeColor=#b85450;" edge="1" source="fw-recover" target="fw-claim" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+        <mxCell id="fedge7" value="shadow or null" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="fw-decision" target="fd-complete" parent="f1">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fedge9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fd-complete" target="fc-poll" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="fedge10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="fc-review" target="fd-review" parent="f1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="fshadow-note" value="Jev is project-allowlisted and disabled by default. Uncertainty records an LLM escalation recommendation only; provider failure adds decision_judge_degraded and still completes deterministically." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="f1">
+          <mxGeometry x="480" y="820" width="1010" height="70" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
@@ -162,88 +177,91 @@
   <diagram id="states" name="03 State and HITL">
     <mxGraphModel dx="1422" dy="794" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1500" pageHeight="850" math="0" shadow="0" adaptiveColors="auto">
       <root>
-        <mxCell id="s0"/>
-        <mxCell id="s1" parent="s0"/>
+        <mxCell id="s0" />
+        <mxCell id="s1" parent="s0" />
         <mxCell id="stitle" value="Independent State Dimensions and Human Review" style="text;html=1;fontSize=22;fontStyle=1;align=left;" vertex="1" parent="s1">
-          <mxGeometry x="40" y="20" width="800" height="40" as="geometry"/>
+          <mxGeometry x="40" y="20" width="800" height="40" as="geometry" />
         </mxCell>
         <mxCell id="sexec" value="Execution status: execution_status" style="swimlane;startSize=32;fillColor=#e8f4f8;strokeColor=#6c8ebf;fontStyle=1;html=1;" vertex="1" parent="s1">
-          <mxGeometry x="40" y="90" width="1320" height="180" as="geometry"/>
+          <mxGeometry x="40" y="90" width="1320" height="180" as="geometry" />
         </mxCell>
         <mxCell id="sq" value="queued" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="sexec">
-          <mxGeometry x="80" y="70" width="140" height="60" as="geometry"/>
+          <mxGeometry x="80" y="70" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="sr" value="running" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="sexec">
-          <mxGeometry x="340" y="70" width="140" height="60" as="geometry"/>
+          <mxGeometry x="340" y="70" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="sc" value="completed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="sexec">
-          <mxGeometry x="600" y="40" width="140" height="60" as="geometry"/>
+          <mxGeometry x="600" y="40" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="sf" value="failed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="sexec">
-          <mxGeometry x="600" y="110" width="140" height="60" as="geometry"/>
+          <mxGeometry x="600" y="110" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="se1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="sq" target="sr" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="se2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="sr" target="sc" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="se3" value="terminal error" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#b85450;" edge="1" source="sr" target="sf" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="sretry-note" value="Expired lease: Job is reclaimable; Judge failure still completes with deterministic result" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="sexec">
-          <mxGeometry x="850" y="60" width="330" height="80" as="geometry"/>
+        <mxCell id="sretry-note" value="Expired lease: Job is reclaimable. Optional judge failure still completes with the deterministic result." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="sexec">
+          <mxGeometry x="850" y="60" width="330" height="80" as="geometry" />
         </mxCell>
         <mxCell id="sverdict" value="Machine verdict after completion: machine_verdict" style="swimlane;startSize=32;fillColor=#f5f5f5;strokeColor=#666666;fontStyle=1;html=1;" vertex="1" parent="s1">
-          <mxGeometry x="40" y="310" width="1320" height="160" as="geometry"/>
+          <mxGeometry x="40" y="310" width="1320" height="160" as="geometry" />
         </mxCell>
         <mxCell id="spass" value="pass" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="sverdict">
-          <mxGeometry x="280" y="60" width="140" height="60" as="geometry"/>
+          <mxGeometry x="280" y="60" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="snot" value="not_passed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="sverdict">
-          <mxGeometry x="760" y="60" width="140" height="60" as="geometry"/>
+          <mxGeometry x="760" y="60" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="sreview" value="Derived Human Review status: review_status" style="swimlane;startSize=32;fillColor=#fff9e6;strokeColor=#d6b656;fontStyle=1;html=1;" vertex="1" parent="s1">
-          <mxGeometry x="40" y="510" width="1320" height="240" as="geometry"/>
+          <mxGeometry x="40" y="510" width="1320" height="240" as="geometry" />
         </mxCell>
         <mxCell id="soptional" value="optional" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="sreview">
-          <mxGeometry x="80" y="75" width="140" height="60" as="geometry"/>
+          <mxGeometry x="80" y="75" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="sapproved" value="approved" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="sreview">
-          <mxGeometry x="300" y="45" width="140" height="60" as="geometry"/>
+          <mxGeometry x="300" y="45" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="srejected1" value="rejected" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="sreview">
-          <mxGeometry x="300" y="135" width="140" height="60" as="geometry"/>
+          <mxGeometry x="300" y="135" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="srequired" value="required" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="sreview">
-          <mxGeometry x="700" y="75" width="140" height="60" as="geometry"/>
+          <mxGeometry x="700" y="75" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="swaived" value="waived&lt;br&gt;Rationale required" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="sreview">
-          <mxGeometry x="920" y="45" width="160" height="60" as="geometry"/>
+          <mxGeometry x="920" y="45" width="160" height="60" as="geometry" />
         </mxCell>
         <mxCell id="srejected2" value="rejected" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="sreview">
-          <mxGeometry x="930" y="135" width="140" height="60" as="geometry"/>
+          <mxGeometry x="930" y="135" width="140" height="60" as="geometry" />
         </mxCell>
         <mxCell id="se5" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="spass" target="soptional" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="se6" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;" edge="1" source="snot" target="srequired" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="se7" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="soptional" target="sapproved" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="se8" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#b85450;" edge="1" source="soptional" target="srejected1" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="se9" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#82b366;" edge="1" source="srequired" target="swaived" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="se10" style="edgeStyle=orthogonalEdgeStyle;rounded=1;html=1;endArrow=classic;strokeWidth=2;strokeColor=#b85450;" edge="1" source="srequired" target="srejected2" parent="s1">
-          <mxGeometry relative="1" as="geometry"/>
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="snote" value="Every review appends an immutable record; machine evaluation results never change." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="s1">
-          <mxGeometry x="960" y="330" width="340" height="90" as="geometry"/>
+          <mxGeometry x="960" y="330" width="340" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="sshadow-note" value="decision_judge_result is shadow evidence only. Jev confidence and routing recommendations never change machine_verdict or review_status." style="shape=note;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="s1">
+          <mxGeometry x="40" y="770" width="1320" height="60" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>

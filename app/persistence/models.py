@@ -73,6 +73,7 @@ class EvaluationResultRow(Base):
     machine_verdict: Mapped[str] = mapped_column(String(30), index=True)
     evaluator_version: Mapped[str] = mapped_column(String(100))
     llm_judge_result: Mapped[dict | None] = mapped_column(JSONB)
+    decision_judge_result: Mapped[dict | None] = mapped_column(JSONB)
     warnings: Mapped[list[dict]] = mapped_column(JSONB, default=list)
     completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

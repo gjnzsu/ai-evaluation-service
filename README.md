@@ -134,3 +134,23 @@ State meanings:
 - `review_status`: `optional` for pass and `required` for not-passed until the latest append-only human decision becomes `approved`, `rejected`, or `waived`.
 
 Inspect the API and Worker logs with `docker compose logs api worker`. Log records contain only allowlisted correlation and status fields; payloads, API keys, prompts, credentials, and raw exceptions are intentionally excluded.
+
+## Experimental shadow decision judge
+
+The Worker can optionally ask TypeSafe Jev one yes/no question, `material_quality_issue_v1`, about the canonical output and deterministic findings. This is a **shadow experiment**: Jev cannot change `machine_verdict`, deterministic scores, job completion, or `review_status`. The batch CLI and its existing optional LLM Judge are unchanged. The nullable API field `decision_judge_result` is separate from `llm_judge_result`; older results return `null`.
+
+Jev is disabled in the default installation and Compose stack. The automated tests use fake clients and need no TypeSafe account. For an opt-in local run, obtain a TypeSafe API key and an actual version-pinned model ID available to that account, then set these values in your private environment (or a local, untracked `.env`):
+
+```text
+AI_EVAL_INSTALL_JEV=true
+AI_EVAL_DECISION_JUDGE_PROVIDER=jev
+AI_EVAL_DECISION_JUDGE_MODEL=<version-pinned-model-id>
+AI_EVAL_DECISION_JUDGE_PROJECTS=project-a
+TYPESAFE_API_KEY=<private-key>
+```
+
+Rebuild the Worker with `docker compose up --build -d`; the API and PostgreSQL remain the same. The Worker refuses to start when Jev is enabled without a key, pinned model, or nonempty project allowlist. Only evaluations owned by listed project IDs are sent to TypeSafe. Do not commit the key, put it in a request payload, or reuse local demo credentials outside the disposable stack. Container environment variables are visible to people who can inspect the local Docker installation.
+
+The initial per-rubric policy is deliberately **uncalibrated**: `p_yes >= 0.90` or `p_yes <= 0.10` records `no_escalation_recommended`; the middle band records `llm_escalation_recommended`. These are recommendations only—no LLM call or Human Review assignment follows. The result stores only provider/model, rubric and policy versions, answer, probability, thresholds, and route. A timeout, malformed answer, or provider error leaves `decision_judge_result` null and records only `decision_judge_degraded`; deterministic completion continues.
+
+Before using this gate for authoritative decisions, collect a separately labeled held-out set covering both artifact types and analyze false passes and calibration by rubric. Current Human Review evidence is not an independent gold label because review eligibility depends on `machine_verdict`. Promotion beyond shadow mode requires a new design change.

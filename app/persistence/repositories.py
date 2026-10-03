@@ -14,6 +14,7 @@ from app.persistence.models import (
     EvaluationReviewRow,
     EvaluationRow,
 )
+from app.worker.decision import DecisionJudgeResult
 
 SessionFactory = async_sessionmaker[AsyncSession]
 
@@ -21,6 +22,7 @@ SessionFactory = async_sessionmaker[AsyncSession]
 @dataclass(frozen=True)
 class ClaimedJob:
     evaluation_id: UUID
+    project_id: str
     request_payload: dict
     lease_owner: str
     lease_expires_at: datetime
@@ -247,6 +249,7 @@ class JobRepository:
             await session.refresh(job, attribute_names=["lease_expires_at"])
             return ClaimedJob(
                 evaluation_id=job.evaluation_id,
+                project_id=evaluation.project_id,
                 request_payload=request_payload,
                 lease_owner=job.lease_owner,
                 lease_expires_at=job.lease_expires_at,
@@ -288,8 +291,10 @@ class JobRepository:
         evaluator_version: str,
         llm_judge_result: dict | None,
         warnings: list[dict],
+        decision_judge_result: dict | None = None,
     ) -> bool:
         self._validate_warnings(warnings)
+        decision_judge_result = self._normalize_decision(decision_judge_result)
         now = datetime.now(UTC)
         async with self._sessions.begin() as session:
             job = await self._owned_running_job(session, evaluation_id, lease_owner)
@@ -302,6 +307,7 @@ class JobRepository:
                     machine_verdict=machine_verdict,
                     evaluator_version=evaluator_version,
                     llm_judge_result=llm_judge_result,
+                    decision_judge_result=decision_judge_result,
                     warnings=warnings,
                     completed_at=now,
                 )
@@ -360,8 +366,15 @@ class JobRepository:
 
     @staticmethod
     def _validate_warnings(warnings: list[dict]) -> None:
-        if any(warning != {"code": "judge_degraded"} for warning in warnings):
-            raise ValueError("warning must use the safe judge_degraded contract")
+        allowed = ({"code": "judge_degraded"}, {"code": "decision_judge_degraded"})
+        if any(warning not in allowed for warning in warnings):
+            raise ValueError("warning must use a safe judge degradation code")
+
+    @staticmethod
+    def _normalize_decision(decision: dict | None) -> dict | None:
+        if decision is None:
+            return None
+        return DecisionJudgeResult.model_validate(decision).model_dump(mode="json")
 
     async def insert_result(
         self,
@@ -373,14 +386,17 @@ class JobRepository:
         llm_judge_result: dict | None,
         warnings: list[dict],
         completed_at: datetime,
+        decision_judge_result: dict | None = None,
     ) -> EvaluationResultRow:
         self._validate_warnings(warnings)
+        decision_judge_result = self._normalize_decision(decision_judge_result)
         result = EvaluationResultRow(
             evaluation_id=evaluation_id,
             deterministic_result=deterministic_result,
             machine_verdict=machine_verdict,
             evaluator_version=evaluator_version,
             llm_judge_result=llm_judge_result,
+            decision_judge_result=decision_judge_result,
             warnings=warnings,
             completed_at=completed_at,
         )

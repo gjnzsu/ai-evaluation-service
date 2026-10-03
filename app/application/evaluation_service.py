@@ -81,6 +81,7 @@ class EvaluationDetail:
     review_status: str | None
     deterministic_result: dict[str, Any] | None
     llm_judge_result: dict[str, Any] | None
+    decision_judge_result: dict[str, Any] | None
     warnings: list[dict]
     review_history: list[ReviewEvidence]
     created_at: datetime
@@ -179,6 +180,9 @@ class EvaluationService:
                 else None
             ),
             llm_judge_result=result.llm_judge_result if result is not None else None,
+            decision_judge_result=(
+                result.decision_judge_result if result is not None else None
+            ),
             warnings=result.warnings if result is not None else [],
             review_history=review_history,
             created_at=evaluation.created_at,

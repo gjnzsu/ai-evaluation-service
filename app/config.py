@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     worker_poll_seconds: float = 0.5
     job_lease_seconds: int = 60
     job_max_attempts: int = 3
+    decision_judge_provider: str = "disabled"
+    decision_judge_model: str = ""
+    decision_judge_projects: str = ""
+    decision_judge_timeout_seconds: float = 3.0
 
 
 @lru_cache

@@ -24,7 +24,7 @@ def test_openapi_uses_v1_service_metadata():
 
 
 class ReadySession:
-    def __init__(self, *, revision="0001_platform_poc", error=None):
+    def __init__(self, *, revision="0002_shadow_decision_judge", error=None):
         self.revision = revision
         self.error = error
         self.calls = 0

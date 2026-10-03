@@ -10,7 +10,8 @@ COPY pyproject.toml README.md alembic.ini ./
 COPY app ./app
 COPY migrations ./migrations
 COPY scripts ./scripts
-RUN python -m pip install .
+ARG INSTALL_JEV=false
+RUN if [ "$INSTALL_JEV" = "true" ]; then python -m pip install '.[jev]'; else python -m pip install .; fi
 
 USER 65532:65532
 

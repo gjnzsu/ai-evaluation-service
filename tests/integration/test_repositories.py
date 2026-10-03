@@ -83,7 +83,68 @@ async def test_migration_creates_expected_schema(
         "evaluation_results",
         "evaluation_reviews",
     } <= table_names
-    assert revision == "0001_platform_poc"
+    assert revision == "0002_shadow_decision_judge"
+
+
+@pytest.mark.asyncio
+async def test_shadow_result_column_is_nullable_and_owned_completion_is_atomic(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    async with session_factory() as session:
+        columns = await session.run_sync(
+            lambda sync_session: inspect(sync_session.connection()).get_columns(
+                "evaluation_results"
+            )
+        )
+    shadow_column = next(
+        column for column in columns if column["name"] == "decision_judge_result"
+    )
+    assert shadow_column["nullable"]
+
+    evaluations = EvaluationRepository(session_factory)
+    evaluation, _ = await evaluations.create_with_job(
+        "project-a", "shadow-result", request(), "hash-shadow-result"
+    )
+    jobs = JobRepository(session_factory)
+    claimed = await jobs.claim_next("worker-a", lease_seconds=60)
+    assert claimed is not None
+    shadow = {
+        "provider": "jev", "model": "jev-pinned", "rubric_version": "material_quality_issue_v1",
+        "policy_version": "v1", "answer": "yes", "p_yes": 0.9,
+        "accept_negative_at": 0.1, "accept_positive_at": 0.9,
+        "recommended_route": "no_escalation_recommended",
+    }
+    arguments = dict(
+        evaluation_id=evaluation.id, lease_owner="worker-a",
+        deterministic_result={"passed": True}, machine_verdict="pass",
+        evaluator_version="deterministic-v1", llm_judge_result=None,
+        decision_judge_result=shadow, warnings=[],
+    )
+    assert await jobs.complete(**arguments) is True
+    assert await jobs.complete(**arguments) is False
+    async with session_factory() as session:
+        result = await session.get(EvaluationResultRow, evaluation.id)
+        row = await session.get(EvaluationRow, evaluation.id)
+        assert result.decision_judge_result == shadow
+        assert row.execution_status == "completed"
+        assert await session.scalar(select(func.count()).select_from(EvaluationResultRow)) == 1
+
+
+@pytest.mark.asyncio
+async def test_existing_style_result_reads_with_null_shadow(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    evaluations = EvaluationRepository(session_factory)
+    evaluation, _ = await evaluations.create_with_job(
+        "project-a", "old-result", request(), "hash-old-result"
+    )
+    await JobRepository(session_factory).insert_result(
+        evaluation_id=evaluation.id, deterministic_result={"passed": True},
+        machine_verdict="pass", evaluator_version="deterministic-v1",
+        llm_judge_result=None, warnings=[], completed_at=datetime.now(UTC),
+    )
+    result = await evaluations.get_result_for_project(evaluation.id, "project-a")
+    assert result.decision_judge_result is None
 
 
 @pytest.mark.asyncio
