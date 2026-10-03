@@ -94,6 +94,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\quality-check.ps1
 
 The local stack contains exactly three services: FastAPI, a PostgreSQL Job Worker, and PostgreSQL 16. The Worker provides at-least-once execution with an expiring lease; the unique result row and lease-owner check protect finalization. The optional LLM Judge is disabled, so no model credentials are required. Deterministic results, optional Judge annotations, and Human Review Evidence remain separate.
 
+### Design diagrams
+
+The current architecture shows the deterministic evaluation path alongside the optional, project-allowlisted shadow Decision Judge. Jev remains disabled by default and does not change the machine verdict or Human Review status.
+
+![AI Evaluation Service POC architecture, including the optional Jev shadow decision path](docs/diagrams/ai-evaluation-service-poc-english-architecture.drawio.svg)
+
+See also the [asynchronous evaluation flow](docs/diagrams/ai-evaluation-service-poc-english-async-flow.drawio.svg) and [state and Human Review diagram](docs/diagrams/ai-evaluation-service-poc-english-state-hitl.drawio.svg). Editable three-page sources are available in [English](docs/diagrams/ai-evaluation-service-poc-english.drawio) and [Chinese](docs/diagrams/ai-evaluation-service-poc.drawio).
+
 Start from a clean local POC database:
 
 ```powershell

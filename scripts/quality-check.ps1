@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "Running POC lint and complete automated test suite..."
 
-python -m ruff check app tests
+python -m ruff check app tests scripts/check_design_docs.py
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 python -m pytest tests -q
