@@ -2,8 +2,10 @@
 
 import re
 from pathlib import Path
+from urllib.parse import unquote
 
 DIAGRAMS = (
+    "docs/diagrams/ai-evaluation-service-poc-english-01%20Service%20Architecture.drawio.png",
     "docs/diagrams/ai-evaluation-service-poc-english-architecture.drawio.svg",
     "docs/diagrams/ai-evaluation-service-poc-english-async-flow.drawio.svg",
     "docs/diagrams/ai-evaluation-service-poc-english-state-hitl.drawio.svg",
@@ -26,6 +28,6 @@ def check_design_docs(root: Path) -> list[str]:
     for diagram in DIAGRAMS:
         if f"]({diagram})" not in readme:
             errors.append(f"README does not link: {diagram}")
-        if not (root / diagram).is_file():
+        if not (root / unquote(diagram)).is_file():
             errors.append(f"missing diagram file: {diagram}")
     return errors
