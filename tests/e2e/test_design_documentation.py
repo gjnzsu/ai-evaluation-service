@@ -7,6 +7,7 @@ def _fixture_repo(tmp_path: Path) -> Path:
     diagrams = tmp_path / "docs" / "diagrams"
     diagrams.mkdir(parents=True)
     for name in (
+        "ai-evaluation-service-poc-english-01 Service Architecture.drawio.png",
         "ai-evaluation-service-poc-english-architecture.drawio.svg",
         "ai-evaluation-service-poc-english-async-flow.drawio.svg",
         "ai-evaluation-service-poc-english-state-hitl.drawio.svg",
@@ -15,7 +16,8 @@ def _fixture_repo(tmp_path: Path) -> Path:
     ):
         (diagrams / name).write_text("diagram", encoding="utf-8")
     (tmp_path / "README.md").write_text(
-        "![Architecture](docs/diagrams/ai-evaluation-service-poc-english-architecture.drawio.svg)\n"
+        "![Architecture](docs/diagrams/ai-evaluation-service-poc-english-01%20Service%20Architecture.drawio.png)\n"
+        "[SVG](docs/diagrams/ai-evaluation-service-poc-english-architecture.drawio.svg)\n"
         "[Flow](docs/diagrams/ai-evaluation-service-poc-english-async-flow.drawio.svg)\n"
         "[HITL](docs/diagrams/ai-evaluation-service-poc-english-state-hitl.drawio.svg)\n"
         "[English](docs/diagrams/ai-evaluation-service-poc-english.drawio)\n"

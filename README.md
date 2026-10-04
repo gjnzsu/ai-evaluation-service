@@ -98,9 +98,9 @@ The local stack contains exactly three services: FastAPI, a PostgreSQL Job Worke
 
 The current architecture shows the deterministic evaluation path alongside the optional, project-allowlisted shadow Decision Judge. Jev remains disabled by default and does not change the machine verdict or Human Review status.
 
-![AI Evaluation Service POC architecture, including the optional Jev shadow decision path](docs/diagrams/ai-evaluation-service-poc-english-architecture.drawio.svg)
+![AI Evaluation Service POC architecture, including the optional Jev shadow decision path](docs/diagrams/ai-evaluation-service-poc-english-01%20Service%20Architecture.drawio.png)
 
-The latest architecture is also available as a [PNG export](docs/diagrams/ai-evaluation-service-poc-english-01%20Service%20Architecture.drawio.png).
+The latest architecture is also available as an [SVG export](docs/diagrams/ai-evaluation-service-poc-english-architecture.drawio.svg).
 
 See also the [asynchronous evaluation flow](docs/diagrams/ai-evaluation-service-poc-english-async-flow.drawio.svg) and [state and Human Review diagram](docs/diagrams/ai-evaluation-service-poc-english-state-hitl.drawio.svg). Editable three-page sources are available in [English](docs/diagrams/ai-evaluation-service-poc-english.drawio) and [Chinese](docs/diagrams/ai-evaluation-service-poc.drawio).
 
